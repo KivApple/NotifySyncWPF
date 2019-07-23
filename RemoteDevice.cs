@@ -6,6 +6,7 @@ using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using Newtonsoft.Json;
@@ -16,12 +17,13 @@ namespace NotifySync {
 		public string Name { get; set; }
         public readonly byte[] Key;
         private readonly NetworkCipher _cipher;
-		private TcpClient _client = null;
-		private NetworkStream _networkStream = null;
+		private TcpClient _client;
+		private NetworkStream _networkStream;
+		private SemaphoreSlim _sendSemaphore;
 		public bool IsConnected => _client != null;
 		public IPAddress LastSeenIpAddress { get; private set; }
 		public event PropertyChangedEventHandler PropertyChanged;
-
+		
 		public BatteryStatus BatteryStatus { get; }
 		public NotificationList NotificationList { get; }
 		
@@ -80,6 +82,7 @@ namespace NotifySync {
 		
 		private async Task DoConnect(IPAddress address) {
 			_client = new TcpClient();
+			_sendSemaphore = new SemaphoreSlim(1, 1);
 			
 			try {
 				await _client.ConnectAsync(address, ProtocolServer.TcpPort);
@@ -119,7 +122,7 @@ namespace NotifySync {
 				catch (ObjectDisposedException) {
 				}
 			}
-
+			
 			_networkStream = null;
 			_client = null;
 			NotifyPropertyChanged("IsConnected");
@@ -153,8 +156,13 @@ namespace NotifySync {
 			var packet = EncryptChunk(data);
 			var packetLength = IPAddress.HostToNetworkOrder((short) packet.Length);
 			var packetLengthBytes = BitConverter.GetBytes(packetLength);
-			await _networkStream.WriteAsync(packetLengthBytes, 0, packetLengthBytes.Length);
-			await _networkStream.WriteAsync(packet, 0, packet.Length);
+			await _sendSemaphore.WaitAsync();
+			try {
+				await _networkStream.WriteAsync(packetLengthBytes, 0, packetLengthBytes.Length);
+				await _networkStream.WriteAsync(packet, 0, packet.Length);
+			} finally {
+				_sendSemaphore.Release();
+			}
 		}
 
 		public async Task SendJson(object data) {
