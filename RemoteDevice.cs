@@ -21,12 +21,7 @@ namespace NotifySync {
 		private TcpClient _client;
 		private NetworkStream _networkStream;
 		private SemaphoreSlim _sendSemaphore;
-		private SemaphoreSlim _sendConfirmSemaphore;
-		private bool _sendConfirmStatus;
-		private MD5 _outputHasher = MD5.Create();
-		private MD5 _inputHasher = MD5.Create();
-		private byte[] _packetLengthBytes = new byte[2];
-		private byte[] _packetHashBytes = new byte[16];
+		private readonly byte[] _packetLengthBytes = new byte[2];
 		public bool IsConnected => _client != null;
 		public IPAddress LastSeenIpAddress { get; private set; }
 		public event PropertyChangedEventHandler PropertyChanged;
@@ -72,7 +67,9 @@ namespace NotifySync {
 			Disconnect();
 			Task.Run(async () => {
 				try {
-					await DoConnect(address);
+					while (await DoConnect(address)) {
+						await Task.Delay(1000);
+					}
 				} catch (Exception e) {
 					App.ShowException(e);
 					Disconnect();
@@ -81,19 +78,13 @@ namespace NotifySync {
 		}
 
 		public void Disconnect() {
-			try {
-				_client?.Close();
-			} catch (ObjectDisposedException) {
-			}
-			_networkStream = null;
-			_client = null;
-			NotifyPropertyChanged("IsConnected");
+			_client?.Close();
 		}
 		
-		private async Task DoConnect(IPAddress address) {
+		private async Task<bool> DoConnect(IPAddress address) {
+			var wasConnected = false;
 			_client = new TcpClient();
 			_sendSemaphore = new SemaphoreSlim(1, 1);
-			_sendConfirmSemaphore = new SemaphoreSlim(0, 1);
 			
 			try {
 				await _client.ConnectAsync(address, ProtocolServer.TcpPort);
@@ -105,18 +96,22 @@ namespace NotifySync {
 				_client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
 
 				await HandleConnect();
-
+				
 				while (true) {
 					var data = await ReadPacket();
-					if (data == null) continue;
+					wasConnected = true;
 					await HandleReceivedData(data);
 				}
 			} catch (IOException) {
+			} catch (SocketException) {
 			} catch (ObjectDisposedException) {
 			} catch (CryptographicException) {
 			}
 			
 			if (_client != null) {
+				await _sendSemaphore.WaitAsync();
+				_networkStream = null;
+				_sendSemaphore.Release();
 				try {
 					_client.Close();
 				}
@@ -124,40 +119,30 @@ namespace NotifySync {
 				}
 			}
 			
-			_networkStream = null;
 			_client = null;
 			NotifyPropertyChanged("IsConnected");
+			
+			return wasConnected;
 		}
 
 		private async Task<byte[]> ReadEncryptedPacket() {
-			await ReadExactNetworkBytes(_packetHashBytes);
 			await ReadExactNetworkBytes(_packetLengthBytes);
 			var packetLength = (ushort) IPAddress.NetworkToHostOrder(BitConverter.ToInt16(_packetLengthBytes, 0));
 			var encryptedPacket = new byte[packetLength];
 			await ReadExactNetworkBytes(encryptedPacket);
-			var expectedMd5Bytes = _inputHasher.ComputeHash(encryptedPacket);
-			var md5Error = false;
-			for (var i = 0; i < _packetHashBytes.Length; i++) {
-				if (_packetHashBytes[i] != expectedMd5Bytes[i]) {
-					md5Error = true;
-				}
-			}
-			return !md5Error ? encryptedPacket : null;
+			return encryptedPacket;
 		}
 
 		private async Task<string> ReadPacket() {
 			var encryptedPacket = await ReadEncryptedPacket();
 			var packet = DecryptChunk(encryptedPacket);
 			var data = Encoding.UTF8.GetString(packet).TrimEnd('\0');
-			if (data != "okay" && data != "error") return data;
-			_sendConfirmStatus = data == "okay";
-			_sendConfirmSemaphore.Release();
-			return null;
+			return data;
 		}
 
 		private async Task SendHandshake() {
 			var handshake = new Random().Next() + ":NotifySync:" + Properties.Settings.Default.DeviceName;
-			await SendStringPacket(handshake, false, true);
+			await SendStringPacket(handshake);
 		}
 
 		private async Task HandleConnect() {
@@ -180,37 +165,31 @@ namespace NotifySync {
 			}
 		}
 
-		private async Task SendEncryptedPacket(byte[] data, bool waitConfirmation, bool handshake) {
+		private async Task SendEncryptedPacket(byte[] data) {
 			var packetLength = IPAddress.HostToNetworkOrder((short) data.Length);
 			var packetLengthBytes = BitConverter.GetBytes(packetLength);
 			await _sendSemaphore.WaitAsync();
 			try {
-				do {
-					if (!handshake) {
-						var hashBytes = _outputHasher.ComputeHash(data);
-						await _networkStream.WriteAsync(hashBytes, 0, hashBytes.Length);
-					}
-					await _networkStream.WriteAsync(packetLengthBytes, 0, packetLengthBytes.Length);
-					await _networkStream.WriteAsync(data, 0, data.Length);
-					if (!handshake && waitConfirmation) {
-						await _sendConfirmSemaphore.WaitAsync();
-					}
-				} while (!handshake && waitConfirmation && !_sendConfirmStatus);
+				if (_networkStream == null) {
+					throw new IOException(Resources.DeviceNotConnected);
+				}
+				await _networkStream.WriteAsync(packetLengthBytes, 0, packetLengthBytes.Length);
+				await _networkStream.WriteAsync(data, 0, data.Length);
 			} finally {
 				_sendSemaphore.Release();
 			}
 		}
 
-		private async Task SendBinaryPacket(byte[] data, bool waitConfirmation, bool handshake) {
-			await SendEncryptedPacket(EncryptChunk(data), waitConfirmation, handshake);
+		private async Task SendBinaryPacket(byte[] data) {
+			await SendEncryptedPacket(EncryptChunk(data));
 		}
 
-		private async Task SendStringPacket(string data, bool waitConfirmation, bool handshake) {
-			await SendBinaryPacket(Encoding.UTF8.GetBytes(data), waitConfirmation, handshake);
+		private async Task SendStringPacket(string data) {
+			await SendBinaryPacket(Encoding.UTF8.GetBytes(data));
 		}
 
 		private async Task SendPacket(string data) {
-			await SendStringPacket(data, true, false);
+			await SendStringPacket(data);
 		}
 		
 		public async Task SendJson(object data) {

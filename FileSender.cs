@@ -32,7 +32,7 @@ namespace NotifySync {
 
 		private async Task<bool> DoSendFile(string path) {
 			try {
-				var buffer = new byte[1024];
+				var buffer = new byte[768];
 				using (var fileStream = new FileStream(path, FileMode.Open)) {
 					var fileName = Path.GetFileName(path);
 					await _device.SendJson(new JObject {
