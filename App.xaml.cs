@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Forms;
 using Microsoft.Shell;
 using Application = System.Windows.Application;
+using MessageBox = System.Windows.MessageBox;
 
 namespace NotifySync {
 	public partial class App : Application, ISingleInstanceApp {
@@ -79,6 +81,14 @@ namespace NotifySync {
 		public static void ShowDeviceWindow(RemoteDevice device) {
 			NotifySync.MainWindow.Instance.ShowDevice(device);
 			ShowMainWindow();
+		}
+
+		public static async Task RunOnUiThreadAsync(Action action) {
+			await Current.Dispatcher.InvokeAsync(action);
+		}
+
+		public static void ShowException(Exception e) {
+			MessageBox.Show(e.Message + "\n" + e.StackTrace);
 		}
 
 		#region ISingleInstanceApp Members

@@ -129,5 +129,13 @@ namespace NotifySync {
 		private void NotifyPropertyChanged([CallerMemberName] string propertyName = "") {
 			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 		}
+
+		private void SendFileButton_OnClick(object sender, RoutedEventArgs e) {
+			var dialog = new OpenFileDialog {
+				Multiselect = true
+			};
+			if (dialog.ShowDialog(this) != true) return;
+			SelectedRemoteDevice.FileSender.SendFiles(dialog.FileNames);
+		}
 	}
 }

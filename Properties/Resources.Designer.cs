@@ -97,6 +97,15 @@ namespace NotifySync.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Device isn&apos;t connected.
+        /// </summary>
+        public static string DeviceNotConnected {
+            get {
+                return ResourceManager.GetString("DeviceNotConnected", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Dismiss notifications on remote device by click.
         /// </summary>
         public static string DismissNotificationsByClick {
@@ -111,6 +120,15 @@ namespace NotifySync.Properties {
         public static string Exit {
             get {
                 return ResourceManager.GetString("Exit", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to File successfully sent to {0}.
+        /// </summary>
+        public static string FileSentTo {
+            get {
+                return ResourceManager.GetString("FileSentTo", resourceCulture);
             }
         }
         
@@ -187,6 +205,24 @@ namespace NotifySync.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Send file....
+        /// </summary>
+        public static string SendFile {
+            get {
+                return ResourceManager.GetString("SendFile", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Sending file to {0}....
+        /// </summary>
+        public static string SendingFileTo {
+            get {
+                return ResourceManager.GetString("SendingFileTo", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Show.
         /// </summary>
         public static string Show {
@@ -202,6 +238,15 @@ namespace NotifySync.Properties {
             get {
                 object obj = ResourceManager.GetObject("TrayIcon", resourceCulture);
                 return ((System.Drawing.Icon)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Unable to send file ({0}).
+        /// </summary>
+        public static string UnableToSendFile {
+            get {
+                return ResourceManager.GetString("UnableToSendFile", resourceCulture);
             }
         }
         

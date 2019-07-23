@@ -113,7 +113,7 @@
 							Click="NewDeviceQrCodeButton_OnClick" 
 							HorizontalAlignment="Center">
 							
-							<Image Name="NewDeviceQrCodeImage" Height="300"/>
+							<Image Name="NewDeviceQrCodeImage" Width="300" Height="300"/>
 						</Button>
 					</Grid>
 					<Label Content="{x:Static res:Resources.ScanQRCodeLabel}" HorizontalContentAlignment="Center"/>
@@ -124,9 +124,9 @@
 				Visibility="Collapsed">
 				
 				<Grid>
-					<DockPanel VerticalAlignment="Top">
+					<DockPanel VerticalAlignment="Top" LastChildFill="True">
 						<StackPanel
-							HorizontalAlignment="Left"
+							DockPanel.Dock="Left"
 							Orientation="Horizontal">
 						
 							<mi:MaterialIcon 
@@ -145,7 +145,7 @@
 							<StackPanel HorizontalAlignment="Stretch" />
 						</StackPanel>
 						<StackPanel
-							HorizontalAlignment="Right"
+							DockPanel.Dock="Right"
 							Orientation="Horizontal">
 						
 							<Label 
@@ -156,7 +156,20 @@
 							<Button
 								Name="UnpairDeviceButton"
 								Click="UnpairDeviceButton_OnClick"
+								Padding="4"
 								Content="{x:Static res:Resources.UnpairDeviceButton}" />
+						</StackPanel>
+						<StackPanel
+							HorizontalAlignment="Center"
+							Orientation="Horizontal">
+							
+							<Button 
+								Name="SendFileButton"
+								Content="{x:Static res:Resources.SendFile}" 
+								Padding="4"
+								IsEnabled="{Binding Path=SelectedRemoteDevice.IsConnected, 
+								RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=Window}}"
+								Click="SendFileButton_OnClick" />
 						</StackPanel>
 					</DockPanel>
 					

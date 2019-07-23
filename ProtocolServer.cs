@@ -34,7 +34,7 @@ namespace NotifySync {
 				try {
 					await AcceptBroadcast();
 				} catch (Exception e) {
-					MessageBox.Show(e.Message);
+					App.ShowException(e);
 				}
 			});
 			SendBroadcasts();
