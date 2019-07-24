@@ -189,7 +189,7 @@ namespace NotifySync {
 		}
 
 		// System.AppUserModel.ToastActivatorCLSID
-		public static PropertyKey SystemAppUserModelToastActivatorClsid => 
+		private static PropertyKey SystemAppUserModelToastActivatorClsid => 
 			new PropertyKey(new Guid("{9F4C2855-9F79-4B39-A8D0-E1D42DE1D5F3}"), 26);
 		
 		[ClassInterface(ClassInterfaceType.None)]
