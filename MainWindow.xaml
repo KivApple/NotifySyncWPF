@@ -150,7 +150,7 @@
 						
 							<Label 
 								Name="LastSeenDeviceIpAddressLabel"
-								Content="{Binding Path=SelectedRemoteDevice.LastSeenIpAddress, 
+								Content="{Binding Path=SelectedRemoteDevice.CurrentIpAddress, 
 								RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=Window}}" />
 						
 							<Button

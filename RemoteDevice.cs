@@ -9,6 +9,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using Windows.Networking.Sockets;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using NotifySync.Properties;
@@ -18,12 +19,9 @@ namespace NotifySync {
 		public string Name { get; set; }
         public readonly byte[] Key;
         private readonly NetworkCipher _cipher;
-		private TcpClient _client;
-		private NetworkStream _networkStream;
-		private SemaphoreSlim _sendSemaphore;
-		private readonly byte[] _packetLengthBytes = new byte[2];
-		public bool IsConnected => _client != null;
-		public IPAddress LastSeenIpAddress { get; private set; }
+		public Connection CurrentConnection { get; private set; }
+        public bool IsConnected => CurrentConnection != null;
+		public IPAddress CurrentIpAddress { get; private set; }
 		public event PropertyChangedEventHandler PropertyChanged;
 		
 		public BatteryStatus BatteryStatus { get; }
@@ -65,176 +63,201 @@ namespace NotifySync {
 
 		public void Connect(IPAddress address) {
 			Disconnect();
-			Task.Run(async () => {
-				try {
-					while (await DoConnect(address)) {
-						await Task.Delay(1000);
-					}
-				} catch (Exception e) {
-					App.ShowException(e);
-					Disconnect();
-				}
-			});
+			CurrentConnection = new Connection(this, address);
 		}
 
 		public void Disconnect() {
-			_client?.Close();
-		}
-		
-		private async Task<bool> DoConnect(IPAddress address) {
-			var wasConnected = false;
-			_client = new TcpClient();
-			_sendSemaphore = new SemaphoreSlim(1, 1);
-			
-			try {
-				await _client.ConnectAsync(address, ProtocolServer.TcpPort);
-				_networkStream = _client.GetStream();
-				await SendHandshake();
-				LastSeenIpAddress = address;
-				NotifyPropertyChanged("LastSeenIpAddress");
-				NotifyPropertyChanged("IsConnected");
-				_client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
-
-				await HandleConnect();
-				
-				while (true) {
-					var data = await ReadPacket();
-					wasConnected = true;
-					await HandleReceivedData(data);
-				}
-			} catch (IOException) {
-			} catch (SocketException) {
-			} catch (ObjectDisposedException) {
-			} catch (CryptographicException) {
-			}
-			
-			if (_client != null) {
-				await _sendSemaphore.WaitAsync();
-				_networkStream = null;
-				_sendSemaphore.Release();
-				try {
-					_client.Close();
-				}
-				catch (ObjectDisposedException) {
-				}
-			}
-			
-			_client = null;
-			NotifyPropertyChanged("IsConnected");
-			
-			return wasConnected;
+			CurrentConnection?.Disconnect();
 		}
 
-		private async Task<byte[]> ReadEncryptedPacket() {
-			await ReadExactNetworkBytes(_packetLengthBytes);
-			var packetLength = (ushort) IPAddress.NetworkToHostOrder(BitConverter.ToInt16(_packetLengthBytes, 0));
-			var encryptedPacket = new byte[packetLength];
-			await ReadExactNetworkBytes(encryptedPacket);
-			return encryptedPacket;
-		}
-
-		private async Task<string> ReadPacket() {
-			var encryptedPacket = await ReadEncryptedPacket();
-			var packet = DecryptChunk(encryptedPacket);
-			var data = Encoding.UTF8.GetString(packet).TrimEnd('\0');
-			return data;
-		}
-
-		private async Task SendHandshake() {
-			var handshake = new Random().Next() + ":NotifySync:" + Properties.Settings.Default.DeviceName;
-			await SendStringPacket(handshake);
-		}
-
-		private async Task HandleConnect() {
-			await NotificationList.HandleConnect();
-		}
-		
-		private async Task HandleReceivedData(string data) {
-			dynamic json = JObject.Parse(data);
-			string type = json.type;
-			switch (type) {
-				case "battery":
-					BatteryStatus.HandleJson(json);
-					NotifyPropertyChanged("BatteryStatus");
-					break;
-				case "notification":
-					await NotificationList.HandleJson(this, json);
-					break;
-				default:
-					break;
-			}
-		}
-
-		private async Task SendEncryptedPacket(byte[] data) {
-			var packetLength = IPAddress.HostToNetworkOrder((short) data.Length);
-			var packetLengthBytes = BitConverter.GetBytes(packetLength);
-			await _sendSemaphore.WaitAsync();
-			try {
-				if (_networkStream == null) {
-					throw new IOException(Resources.DeviceNotConnected);
-				}
-				await _networkStream.WriteAsync(packetLengthBytes, 0, packetLengthBytes.Length);
-				await _networkStream.WriteAsync(data, 0, data.Length);
-			} finally {
-				_sendSemaphore.Release();
-			}
-		}
-
-		private async Task SendBinaryPacket(byte[] data) {
-			await SendEncryptedPacket(EncryptChunk(data));
-		}
-
-		private async Task SendStringPacket(string data) {
-			await SendBinaryPacket(Encoding.UTF8.GetBytes(data));
-		}
-
-		private async Task SendPacket(string data) {
-			await SendStringPacket(data);
-		}
-		
-		public async Task SendJson(object data) {
-			var json = JsonConvert.SerializeObject(data);
-			await SendPacket(json);
-		}
-
-		private async Task ReadExactNetworkBytes(byte[] buffer) {
-			await ReadExactNetworkBytes(buffer, 0, buffer.Length);
-		}
-		
-		private async Task ReadExactNetworkBytes(byte[] buffer, int offset, int count) {
-			while (offset < count) {
-				var chunkSize = await _networkStream.ReadAsync(buffer, offset, count - offset);
-				if (chunkSize == 0) {
-					throw new IOException("Endpoint disconnected");
-				}
-				offset += chunkSize;
-			}
-		}
-		
 		private byte[] EncryptChunk(byte[] chunk) {
-			using (var outputStream = new MemoryStream()) {
-				using (var encryptor = _cipher.CreateEncryptor()) {
-					using (var cryptoStream = new CryptoStream(outputStream, encryptor, CryptoStreamMode.Write)) {
-						cryptoStream.Write(chunk, 0, chunk.Length);
+			lock (_cipher) {
+				using (var outputStream = new MemoryStream()) {
+					using (var encryptor = _cipher.CreateEncryptor()) {
+						using (var cryptoStream = new CryptoStream(outputStream, encryptor, CryptoStreamMode.Write)) {
+							cryptoStream.Write(chunk, 0, chunk.Length);
+						}
+
+						return outputStream.ToArray();
 					}
-					return outputStream.ToArray();
 				}
 			}
 		}
 
 		private byte[] DecryptChunk(byte[] chunk) {
-			using (var outputStream = new MemoryStream()) {
-				using (var decryptor = _cipher.CreateDecryptor()) {
-					using (var cryptoStream = new CryptoStream(outputStream, decryptor, CryptoStreamMode.Write)) {
-						cryptoStream.Write(chunk, 0, chunk.Length);
+			lock (_cipher) {
+				using (var outputStream = new MemoryStream()) {
+					using (var decryptor = _cipher.CreateDecryptor()) {
+						using (var cryptoStream = new CryptoStream(outputStream, decryptor, CryptoStreamMode.Write)) {
+							cryptoStream.Write(chunk, 0, chunk.Length);
+						}
+
+						return outputStream.ToArray();
 					}
-					return outputStream.ToArray();
 				}
 			}
 		}
 		
 		private void NotifyPropertyChanged([CallerMemberName] string propertyName = "") {
 			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+		}
+
+		public class Connection {
+			private const int ReconnectDelay = 2000;
+			
+			public readonly RemoteDevice RemoteDevice;
+			private bool _wasConnected;
+			private readonly TcpClient _tcpClient = new TcpClient();
+			private NetworkStream _networkStream;
+			private SemaphoreSlim _sendSemaphore = new SemaphoreSlim(1, 1);
+			private byte[] _packetLengthBytes = new byte[2];
+
+			public Connection(RemoteDevice device, IPAddress ipAddress) {
+				RemoteDevice = device;
+				Task.Run(async () => {
+					try {
+						await Connect(ipAddress);
+					} catch (Exception e) {
+						App.ShowException(e);
+					}
+					if (_wasConnected) {
+						await Task.Delay(ReconnectDelay);
+						device.Connect(ipAddress);
+					}
+				});
+			}
+
+			private async Task Connect(IPAddress ipAddress) {
+				try {
+					await _tcpClient.ConnectAsync(ipAddress, ProtocolServer.TcpPort);
+					_tcpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
+					_networkStream = _tcpClient.GetStream();
+					await SendHandshake();
+					RemoteDevice.CurrentIpAddress = ipAddress;
+					RemoteDevice.NotifyPropertyChanged("CurrentIpAddress");
+					RemoteDevice.NotifyPropertyChanged("IsConnected");
+					while (_tcpClient.Connected) {
+						var json = await ReceiveJson();
+						_wasConnected = true;
+						await HandleJson(json);
+					}
+				} catch (SocketReadFailedException) {
+				} catch (SocketException) {
+				} finally {
+					await HandleDisconnect();
+				}
+			}
+
+			public void Disconnect() {
+				_tcpClient.Close();
+			}
+
+			private async Task HandleDisconnect() {
+				RemoteDevice.CurrentConnection = null;
+				RemoteDevice.CurrentIpAddress = null;
+				RemoteDevice.NotifyPropertyChanged("IsConnected");
+				RemoteDevice.NotifyPropertyChanged("CurrentIpAddress");
+
+				await RemoteDevice.NotificationList.HandleDisconnect();
+				RemoteDevice.BatteryStatus.HandleDisconnect();
+				RemoteDevice.NotifyPropertyChanged("BatteryStatus");
+			}
+
+			private async Task HandleJson(dynamic json) {
+				string type = json.type;
+				switch (type) {
+					case "battery":
+						RemoteDevice.BatteryStatus.HandleJson(json);
+						RemoteDevice.NotifyPropertyChanged("BatteryStatus");
+						break;
+					case "notification":
+						await RemoteDevice.NotificationList.HandleJson(this, json);
+						break;
+				}
+			}
+
+			private async Task SendHandshake() {
+				var handshake = new Random().Next() + ":NotifySync:" + Settings.Default.DeviceName;
+				await SendString(handshake);
+			}
+
+			public async Task SendJson(object data) {
+				var json = JsonConvert.SerializeObject(data);
+				await SendString(json);
+			}
+
+			private async Task SendString(string packet) {
+				var bytes = Encoding.UTF8.GetBytes(packet);
+				await SendBytes(bytes);
+			}
+
+			private async Task SendBytes(byte[] packet) {
+				var encryptedPacket = EncryptChunk(packet);
+				await SendEncrypted(encryptedPacket);
+			}
+			
+			private async Task SendEncrypted(byte[] packet) {
+				var packetLength = IPAddress.HostToNetworkOrder((short) packet.Length);
+				var packetLengthBytes = BitConverter.GetBytes(packetLength);
+				await _sendSemaphore.WaitAsync();
+				try {
+					if (_networkStream == null) {
+						throw new IOException(Resources.DeviceNotConnected);
+					}
+					await _networkStream.WriteAsync(packetLengthBytes, 0, packetLengthBytes.Length);
+					await _networkStream.WriteAsync(packet, 0, packet.Length);
+				} finally {
+					_sendSemaphore.Release();
+				}
+			}
+
+			private async Task<dynamic> ReceiveJson() {
+				var text = await ReceiveString();
+				return JObject.Parse(text);
+			}
+			
+			private async Task<string> ReceiveString() {
+				var bytes = await ReceiveBytes();
+				return Encoding.UTF8.GetString(bytes);
+			}
+
+			private async Task<byte[]> ReceiveBytes() {
+				var encryptedPacket = await ReceiveEncrypted();
+				return DecryptChunk(encryptedPacket);
+			}
+			
+			private async Task<byte[]> ReceiveEncrypted() {
+				await ReceiveExactNetworkBytes(_packetLengthBytes);
+				var packetLength = (ushort) IPAddress.NetworkToHostOrder(BitConverter.ToInt16(_packetLengthBytes, 0));
+				var encryptedPacket = new byte[packetLength];
+				await ReceiveExactNetworkBytes(encryptedPacket);
+				return encryptedPacket;
+			}
+			
+			private async Task ReceiveExactNetworkBytes(byte[] buffer) {
+				await ReceiveExactNetworkBytes(buffer, 0, buffer.Length);
+			}
+		
+			private async Task ReceiveExactNetworkBytes(byte[] buffer, int offset, int count) {
+				while (offset < count) {
+					var chunkSize = await _networkStream.ReadAsync(buffer, offset, count - offset);
+					if (chunkSize == 0) {
+						throw new SocketReadFailedException();
+					}
+					offset += chunkSize;
+				}
+			}
+
+			private byte[] EncryptChunk(byte[] chunk) {
+				return RemoteDevice.EncryptChunk(chunk);
+			}
+
+			private byte[] DecryptChunk(byte[] chunk) {
+				return RemoteDevice.DecryptChunk(chunk);
+			}
+
+			private class SocketReadFailedException : Exception {
+			}
 		}
 	}
 }

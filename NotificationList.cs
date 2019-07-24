@@ -17,7 +17,7 @@ namespace NotifySync {
 			Notifications = new ReadOnlyObservableCollection<NotificationItem>(_notifications);
 		}
 
-		public async Task HandleConnect() {
+		public async Task HandleDisconnect() {
 			await Application.Current.Dispatcher.InvokeAsync(() => {
 				foreach (var notification in _notifications) {
 					if (notification.SystemNotificationTag == null) continue;
@@ -27,7 +27,8 @@ namespace NotifySync {
 			});
 		}
 
-		public async Task HandleJson(RemoteDevice device, dynamic json) {
+		public async Task HandleJson(RemoteDevice.Connection connection, dynamic json) {
+			RemoteDevice device = connection.RemoteDevice;
 			string action = json.action;
 			switch (action) {
 				case "posted": {
@@ -87,7 +88,7 @@ namespace NotifySync {
 						systemNotification.Activated += sender => {
 							if (Settings.Default.DismissNotificationsByClick) {
 								Task.Run(async () => {
-									await device.SendJson(new JObject {
+									await connection.SendJson(new JObject {
 										["type"] = "notification",
 										["key"] = key
 									});
@@ -98,7 +99,7 @@ namespace NotifySync {
 						};
 						systemNotification.ActionActivated += (sender, index, text) => {
 							Task.Run(async () => {
-								await device.SendJson(new JObject {
+								await connection.SendJson(new JObject {
 									["type"] = "notification", 
 									["key"] = key,
 									["actionIndex"] = index, 

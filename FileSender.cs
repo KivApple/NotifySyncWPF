@@ -17,9 +17,12 @@ namespace NotifySync {
 			Task.Run(async () => {
 				await _semaphore.WaitAsync();
 				try {
-					foreach (var path in paths) {
-						if (!await DoSendFile(path)) {
-							break;
+					var connection = _device.CurrentConnection;
+					if (connection != null) {
+						foreach (var path in paths) {
+							if (!await DoSendFile(connection, path)) {
+								break;
+							}
 						}
 					}
 				} catch (Exception e) {
@@ -30,12 +33,12 @@ namespace NotifySync {
 			});
 		}
 
-		private async Task<bool> DoSendFile(string path) {
+		private async Task<bool> DoSendFile(RemoteDevice.Connection connection, string path) {
 			try {
 				var buffer = new byte[768];
 				using (var fileStream = new FileStream(path, FileMode.Open)) {
 					var fileName = Path.GetFileName(path);
-					await _device.SendJson(new JObject {
+					await connection.SendJson(new JObject {
 						["type"] = "file",
 						["name"] = fileName,
 						["size"] = fileStream.Length
@@ -52,19 +55,19 @@ namespace NotifySync {
 						do {
 							count = await fileStream.ReadAsync(buffer, 0, buffer.Length);
 							var base64String = Convert.ToBase64String(buffer, 0, count);
-							await _device.SendJson(new JObject {
+							await connection.SendJson(new JObject {
 								["type"] = "file",
 								["chunk"] = base64String
 							});
 						} while (count == buffer.Length);
 
-						await _device.SendJson(new JObject {
+						await connection.SendJson(new JObject {
 							["type"] = "file",
 							["status"] = "complete"
 						});
 					} catch (Exception) {
 						try {
-							await _device.SendJson(new JObject {
+							await connection.SendJson(new JObject {
 								["type"] = "file",
 								["status"] = "cancel"
 							});

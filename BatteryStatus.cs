@@ -13,6 +13,12 @@ namespace NotifySync {
 			Charging = json.charging;
 			NotifyPropertyChanged();
 		}
+
+		public void HandleDisconnect() {
+			CurrentLevel = -1;
+			Charging = false;
+			NotifyPropertyChanged();
+		}
 		
 		private void NotifyPropertyChanged([CallerMemberName] string propertyName = "") {
 			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
