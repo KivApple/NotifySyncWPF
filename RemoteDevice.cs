@@ -139,7 +139,12 @@ namespace NotifySync {
 					RemoteDevice.NotifyPropertyChanged("CurrentIpAddress");
 					RemoteDevice.NotifyPropertyChanged("IsConnected");
 					while (_tcpClient.Connected) {
-						var json = await ReceiveJson();
+						dynamic json;
+						try {
+							json = await ReceiveJson();
+						} catch (ObjectDisposedException) {
+							break;
+						}
 						_wasConnected = true;
 						await HandleJson(json);
 					}
