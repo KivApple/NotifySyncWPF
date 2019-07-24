@@ -8,8 +8,6 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows;
-using Windows.Networking.Sockets;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using NotifySync.Properties;
@@ -55,7 +53,7 @@ namespace NotifySync {
 		}
 
 		public async Task SendBroadcast(UdpClient udpClient, IPAddress broadcastAddress) {
-			var packet = new Random().Next() + ":NotifySyncServer:1:" + Properties.Settings.Default.DeviceName;
+			var packet = new Random().Next() + ":NotifySyncServer:1:" + Settings.Default.DeviceName;
 			var encryptedPacket = EncryptChunk(Encoding.UTF8.GetBytes(packet));
 			await udpClient.SendAsync(encryptedPacket, encryptedPacket.Length, 
 				new IPEndPoint(broadcastAddress, ProtocolServer.UdpPort));
@@ -63,7 +61,7 @@ namespace NotifySync {
 
 		public void Connect(IPAddress address) {
 			Disconnect();
-			CurrentConnection = new Connection(this, address);
+			CurrentConnection = new Connection(this, address, Settings.Default.EnableEncryption);
 		}
 
 		public void Disconnect() {
@@ -109,11 +107,13 @@ namespace NotifySync {
 			private bool _wasConnected;
 			private readonly TcpClient _tcpClient = new TcpClient();
 			private NetworkStream _networkStream;
-			private SemaphoreSlim _sendSemaphore = new SemaphoreSlim(1, 1);
-			private byte[] _packetLengthBytes = new byte[2];
-
-			public Connection(RemoteDevice device, IPAddress ipAddress) {
+			private readonly SemaphoreSlim _sendSemaphore = new SemaphoreSlim(1, 1);
+			private readonly byte[] _packetLengthBytes = new byte[2];
+			private readonly bool _encryptionEnabled;
+			
+			public Connection(RemoteDevice device, IPAddress ipAddress, bool encryptionEnabled) {
 				RemoteDevice = device;
+				_encryptionEnabled = encryptionEnabled;
 				Task.Run(async () => {
 					try {
 						await Connect(ipAddress);
@@ -143,6 +143,7 @@ namespace NotifySync {
 					}
 				} catch (SocketReadFailedException) {
 				} catch (SocketException) {
+				} catch (IOException) {
 				} finally {
 					await HandleDisconnect();
 				}
@@ -177,8 +178,9 @@ namespace NotifySync {
 			}
 
 			private async Task SendHandshake() {
-				var handshake = new Random().Next() + ":NotifySync:" + Settings.Default.DeviceName;
-				await SendString(handshake);
+				var handshake = new Random().Next() + ":NotifySync:" + (_encryptionEnabled ? "1" : "0") + 
+				                ":" + Settings.Default.DeviceName;
+				await SendString(handshake, true);
 			}
 
 			public async Task SendJson(object data) {
@@ -186,13 +188,13 @@ namespace NotifySync {
 				await SendString(json);
 			}
 
-			private async Task SendString(string packet) {
+			private async Task SendString(string packet, bool handshake = false) {
 				var bytes = Encoding.UTF8.GetBytes(packet);
-				await SendBytes(bytes);
+				await SendBytes(bytes, handshake);
 			}
 
-			private async Task SendBytes(byte[] packet) {
-				var encryptedPacket = EncryptChunk(packet);
+			private async Task SendBytes(byte[] packet, bool handshake = false) {
+				var encryptedPacket = handshake || _encryptionEnabled ? EncryptChunk(packet) : packet;
 				await SendEncrypted(encryptedPacket);
 			}
 			
@@ -223,7 +225,8 @@ namespace NotifySync {
 
 			private async Task<byte[]> ReceiveBytes() {
 				var encryptedPacket = await ReceiveEncrypted();
-				return DecryptChunk(encryptedPacket);
+				var packet = _encryptionEnabled ? DecryptChunk(encryptedPacket) : encryptedPacket;
+				return packet;
 			}
 			
 			private async Task<byte[]> ReceiveEncrypted() {

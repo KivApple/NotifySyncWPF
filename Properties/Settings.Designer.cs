@@ -69,5 +69,17 @@ namespace NotifySync.Properties {
                 this["DismissNotificationsByClick"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool EnableEncryption {
+            get {
+                return ((bool)(this["EnableEncryption"]));
+            }
+            set {
+                this["EnableEncryption"] = value;
+            }
+        }
     }
 }

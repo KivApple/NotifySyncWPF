@@ -184,4 +184,7 @@
   <data name="FileSentTo" xml:space="preserve">
     <value>File successfully sent to {0}</value>
   </data>
+  <data name="EnableEncryption" xml:space="preserve">
+    <value>Enable end-to-end encryption (recommended)</value>
+  </data>
 </root>

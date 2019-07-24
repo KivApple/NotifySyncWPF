@@ -1,11 +1,14 @@
 using System;
 using System.IO;
+using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 
 namespace NotifySync {
 	public class FileSender {
+		private const int SendBufferSize = 20480;
+		
 		private readonly RemoteDevice _device;
 		private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
 		
@@ -35,7 +38,6 @@ namespace NotifySync {
 
 		private async Task<bool> DoSendFile(RemoteDevice.Connection connection, string path) {
 			try {
-				var buffer = new byte[768];
 				using (var fileStream = new FileStream(path, FileMode.Open)) {
 					var fileName = Path.GetFileName(path);
 					await connection.SendJson(new JObject {
@@ -51,6 +53,7 @@ namespace NotifySync {
 						App.SystemNotifier.ShowNotification(notification);
 					});
 					try {
+						var buffer = new byte[SendBufferSize];
 						int count;
 						do {
 							count = await fileStream.ReadAsync(buffer, 0, buffer.Length);
@@ -71,10 +74,8 @@ namespace NotifySync {
 								["type"] = "file",
 								["status"] = "cancel"
 							});
-						}
-						catch (IOException) {
-						}
-						catch (ObjectDisposedException) {
+						} catch (Exception) {
+							// Ignore
 						}
 						throw;
 					} finally {

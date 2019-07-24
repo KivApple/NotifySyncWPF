@@ -100,6 +100,10 @@
 							Content="{x:Static res:Resources.DismissNotificationsByClick}"
 							IsChecked="{Binding Source={StaticResource Settings}, 
 							Path=Default.DismissNotificationsByClick}" />
+					<CheckBox Name="EnableEncryptionCheckBox" 
+							Content="{x:Static res:Resources.EnableEncryption}"
+							IsChecked="{Binding Source={StaticResource Settings}, 
+							Path=Default.EnableEncryption}" />
 				</StackPanel>
 			</TabItem>
             <TabItem
