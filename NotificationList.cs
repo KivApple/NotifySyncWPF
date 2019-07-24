@@ -2,7 +2,6 @@ using System;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
-using System.Runtime.Serialization;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media.Imaging;
@@ -11,20 +10,18 @@ using NotifySync.Properties;
 
 namespace NotifySync {
 	public class NotificationList {
-		private static readonly ObjectIDGenerator ObjectIdGenerator = new ObjectIDGenerator();
-		private readonly string _notificationTagPrefix;
 		private readonly ObservableCollection<NotificationItem> _notifications = new ObservableCollection<NotificationItem>();
 		public ReadOnlyObservableCollection<NotificationItem> Notifications { get; }
 
-		public NotificationList(RemoteDevice remoteDevice) {
-			_notificationTagPrefix = ObjectIdGenerator.GetId(remoteDevice, out _).ToString();
+		public NotificationList() {
 			Notifications = new ReadOnlyObservableCollection<NotificationItem>(_notifications);
 		}
 
 		public async Task HandleConnect() {
 			await Application.Current.Dispatcher.InvokeAsync(() => {
 				foreach (var notification in _notifications) {
-					App.SystemNotifier.DismissNotification(MakeSystemNotificationTag(notification.Key));
+					if (notification.SystemNotificationTag == null) continue;
+					App.SystemNotifier.DismissNotification(notification.SystemNotificationTag);
 				}
 				_notifications.Clear();
 			});
@@ -76,7 +73,6 @@ namespace NotifySync {
 						}
 
 						var systemNotification = new SystemNotification {
-							Tag = MakeSystemNotificationTag(item.Key),
 							AppName = item.AppName,
 							Title = item.Title,
 							Text = item.Message,
@@ -111,6 +107,7 @@ namespace NotifySync {
 							});
 						};
 						App.SystemNotifier.ShowNotification(systemNotification);
+						item.SystemNotificationTag = systemNotification.Tag;
 					});
 					break;
 				}
@@ -118,20 +115,18 @@ namespace NotifySync {
 					string key = json.key;
 					await Application.Current.Dispatcher.InvokeAsync(() => {
 						for (var i = 0; i < _notifications.Count; i++) {
-							if (_notifications[i].Key == key) {
-								_notifications.RemoveAt(i);
-								break;
+							var notification = _notifications[i];
+							if (notification.Key != key) continue;
+							_notifications.RemoveAt(i);
+							if (notification.SystemNotificationTag != null) {
+								App.SystemNotifier.DismissNotification(notification.SystemNotificationTag);
 							}
+							break;
 						}
-						App.SystemNotifier.DismissNotification(MakeSystemNotificationTag(key));
 					});
 					break;
 				}
 			}
-		}
-
-		private string MakeSystemNotificationTag(string key) {
-			return _notificationTagPrefix + "|" + key;
 		}
 	}
 
@@ -143,6 +138,7 @@ namespace NotifySync {
 		public BitmapImage Icon { get; }
 		public DateTime Timestamp { get; }
 		public Action[] Actions;
+		internal string SystemNotificationTag;
 		
 		public NotificationItem(string key, string appName, string title, string message, BitmapImage icon, DateTime timestamp) {
 			Key = key;

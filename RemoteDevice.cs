@@ -35,7 +35,7 @@ namespace NotifySync {
 			_cipher = new NetworkCipher(key);
 			// Initialize plugins
 			BatteryStatus = new BatteryStatus();
-			NotificationList = new NotificationList(this);
+			NotificationList = new NotificationList();
 			FileSender = new FileSender(this);
 		}
 

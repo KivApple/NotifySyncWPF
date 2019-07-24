@@ -88,6 +88,11 @@ namespace NotifySync {
 
 		public void DismissNotification(string tag) {
 			if (!_toasts.TryGetValue(tag, out var toast)) return;
+			if (_notifications.TryGetValue(tag, out var notification)) {
+				notification.Dismiss();
+				_notifications.Remove(tag);
+			}
+			_toasts.Remove(tag);
 			_toastNotifier.Hide(toast);
 		}
 
@@ -115,8 +120,9 @@ namespace NotifySync {
 		
 		private void OnDismissed(ToastNotification sender, ToastDismissedEventArgs e) {
 			var found = _notifications.TryGetValue(sender.Tag, out var notification);
-			_notifications.Remove(sender.Tag);
-			_toasts.Remove(sender.Tag);
+			// TODO: When remove notification from our collections?
+			//_notifications.Remove(sender.Tag);
+			//_toasts.Remove(sender.Tag);
 			if (!found) return;
 			notification.Dismiss();
 		}
