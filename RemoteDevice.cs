@@ -106,7 +106,7 @@ namespace NotifySync {
 			private const int ReconnectDelay = 2000;
 			
 			public readonly RemoteDevice RemoteDevice;
-			private bool _wasConnected;
+			//private bool _wasConnected;
 			private readonly TcpClient _tcpClient = new TcpClient();
 			private NetworkStream _networkStream;
 			private readonly SemaphoreSlim _sendSemaphore = new SemaphoreSlim(1, 1);
@@ -122,10 +122,10 @@ namespace NotifySync {
 					} catch (Exception e) {
 						App.ShowException(e);
 					}
-					if (_wasConnected) {
+					/* if (_wasConnected) {
 						await Task.Delay(ReconnectDelay);
 						device.Connect(ipAddress);
-					}
+					} */
 				});
 			}
 
@@ -145,7 +145,7 @@ namespace NotifySync {
 						} catch (ObjectDisposedException) {
 							break;
 						}
-						_wasConnected = true;
+						//_wasConnected = true;
 						await HandleJson(json);
 					}
 				} catch (SocketReadFailedException) {
