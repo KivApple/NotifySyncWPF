@@ -96,10 +96,10 @@
 							MaxLength="64" 
 							Margin="0,0,0,4" />
 					<CheckBox Name="AutoStartCheckBox" Content="{x:Static res:Resources.AutoStart}" />
-					<CheckBox Name="DismissNotificationsByClickCheckBox" 
+					<!-- <CheckBox Name="DismissNotificationsByClickCheckBox" 
 							Content="{x:Static res:Resources.DismissNotificationsByClick}"
 							IsChecked="{Binding Source={StaticResource Settings}, 
-							Path=Default.DismissNotificationsByClick}" />
+							Path=Default.DismissNotificationsByClick}" /> -->
 					<CheckBox Name="EnableEncryptionCheckBox" 
 							Content="{x:Static res:Resources.EnableEncryption}"
 							IsChecked="{Binding Source={StaticResource Settings}, 

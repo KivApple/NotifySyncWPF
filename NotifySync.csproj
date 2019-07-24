@@ -37,7 +37,7 @@
     <ApplicationIcon>Resources\TrayIcon.ico</ApplicationIcon>
   </PropertyGroup>
   <PropertyGroup>
-    <TargetPlatformVersion>7.0</TargetPlatformVersion>
+    <TargetPlatformVersion>10.0.10240.0</TargetPlatformVersion>
   </PropertyGroup>
   <PropertyGroup>
     <StartupObject>NotifySync.App</StartupObject>
@@ -80,9 +80,9 @@
     <Reference Include="System.Xaml">
       <RequiredTargetFramework>4.0</RequiredTargetFramework>
     </Reference>
-    <Reference Include="Windows, Version=255.255.255.255, Culture=neutral, PublicKeyToken=null, ContentType=WindowsRuntime">
-      <HintPath>..\..\..\..\..\Program Files (x86)\Windows Kits\10\UnionMetadata\10.0.16299.0\Windows.winmd</HintPath>
-    </Reference>
+    <Reference Include="Windows.Data" />
+    <Reference Include="Windows.Foundation" />
+    <Reference Include="Windows.UI" />
     <Reference Include="WindowsBase" />
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
@@ -99,14 +99,16 @@
     <Compile Include="FileReceiver.cs" />
     <Compile Include="FileSender.cs" />
     <Compile Include="ISystemNotifier.cs" />
-    <Compile Include="KnownFolders.cs" />
     <Compile Include="NotificationList.cs" />
     <Compile Include="ProtocolServer.cs" />
     <Compile Include="RemoteDevice.cs" />
-    <Compile Include="SingleInstance.cs" />
     <Compile Include="TextInputDialog.xaml.cs">
       <DependentUpon>TextInputDialog.xaml</DependentUpon>
     </Compile>
+    <Compile Include="ThirdPartyCode\CShellLink.cs" />
+    <Compile Include="ThirdPartyCode\DesktopNotificationManagerCompat.cs" />
+    <Compile Include="ThirdPartyCode\KnownFolders.cs" />
+    <Compile Include="ThirdPartyCode\SingleInstance.cs" />
     <Compile Include="UwpToastNotifier.cs" />
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>

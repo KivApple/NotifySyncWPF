@@ -85,7 +85,7 @@ namespace NotifySync {
 								IsTextInput = act.IsTextInput
 							}).ToArray()
 						};
-						systemNotification.Activated += sender => {
+						/* systemNotification.Activated += sender => {
 							if (Settings.Default.DismissNotificationsByClick) {
 								Task.Run(async () => {
 									await connection.SendJson(new JObject {
@@ -96,7 +96,7 @@ namespace NotifySync {
 							} else {
 								App.ShowDeviceWindow(device);
 							}
-						};
+						}; */
 						systemNotification.ActionActivated += (sender, index, text) => {
 							Task.Run(async () => {
 								await connection.SendJson(new JObject {

@@ -2,14 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
 using System.Security.Cryptography;
-using System.Text;
+using System.Windows;
 using Windows.Data.Xml.Dom;
 using Windows.UI.Notifications;
-using Microsoft.Win32;
+using DesktopNotifications;
 using Microsoft.WindowsAPICodePack.Shell.PropertySystem;
 using MS.WindowsAPICodePack.Internal;
 using NotifySync.Properties;
@@ -17,7 +16,9 @@ using NotifySync.Properties;
 namespace NotifySync {
 	public class UwpToastNotifier : ISystemNotifier {
 		private const string AppId = "NotifySync";
-		private readonly string _appName = Properties.Resources.AppName;
+		
+		private static UwpToastNotifier Instance { get; set; }
+		private readonly string _appName = Resources.AppName;
 		private readonly ToastNotifier _toastNotifier;
 		private readonly Dictionary<string, ToastNotification> _toasts = new Dictionary<string, ToastNotification>();
 		private readonly Dictionary<string, SystemNotification> _notifications = new Dictionary<string, SystemNotification>();
@@ -25,11 +26,14 @@ namespace NotifySync {
 		private readonly ObjectIDGenerator _toastIdGenerator = new ObjectIDGenerator();
 		
 		public UwpToastNotifier() {
-			CreateShortcut(AppId, _appName, false);
-			CreateRegistryKey(AppId);
-			_toastNotifier = ToastNotificationManager.CreateToastNotifier(AppId);
+			Instance = this;
+			CreateShortcut<MyNotificationActivator>(AppId, _appName, true);
+			DesktopNotificationManagerCompat.RegisterAumidAndComServer<MyNotificationActivator>(AppId);
+			DesktopNotificationManagerCompat.RegisterActivator<MyNotificationActivator>();
+			_toastNotifier = DesktopNotificationManagerCompat.CreateToastNotifier();
+			DesktopNotificationManagerCompat.History.Clear();
 		}
-		
+
 		public void ShowNotification(SystemNotification notification) {
 			ToastTemplateType toastTemplateType;
 			if (notification.IconData != null) {
@@ -58,31 +62,40 @@ namespace NotifySync {
 				toastXml.DocumentElement.SetAttribute("displayTimestamp",
 					notification.Timestamp.Value.ToString("yyyy-MM-ddTHH:mm:ssZ"));
 			}
-			if (notification.Actions.Length > 0) {
-				var actionsElement = toastXml.CreateElement("actions");
-				foreach (var action in notification.Actions) {
-					var actionElement = toastXml.CreateElement("action");
-					actionElement.SetAttribute("content", action.Title);
-					actionElement.SetAttribute("arguments", 
-						 (action.IsTextInput ? "text-input" : "click") + "=" + action.Index);
-					actionElement.SetAttribute("activationType", 
-						action.IsTextInput ? "foreground" : "background");
-					actionsElement.AppendChild(actionElement);
-				}
-				toastXml.DocumentElement.AppendChild(actionsElement);
-			}
 			if (notification.Tag == null) {
 				notification.Tag = "#" + _toastIdGenerator.GetId(notification, out _);
 			} else if (notification.Tag.StartsWith("#")) {
 				notification.Tag = "#" + notification.Tag;
 			}
+			if (notification.Actions.Length > 0) {
+				var actionsElement = toastXml.CreateElement("actions");
+				foreach (var action in notification.Actions) {
+					var actionElement = toastXml.CreateElement("action");
+					if (action.IsTextInput) {
+						var inputElement = toastXml.CreateElement("input");
+						inputElement.SetAttribute("id", "input" + action.Index);
+						inputElement.SetAttribute("type", "text");
+						inputElement.SetAttribute("placeHolderContent", action.Title);
+						actionsElement.AppendChild(inputElement);
+						
+						actionElement.SetAttribute("hint-inputId", "input" + action.Index);
+						actionElement.SetAttribute("content", Resources.Send);
+					} else { 
+						actionElement.SetAttribute("content", action.Title);
+					}
+					var arguments = $"tag={Uri.EscapeDataString(notification.Tag)}&{(action.IsTextInput ? "text-input" : "click")}={action.Index}";
+					actionElement.SetAttribute("arguments", arguments);
+					actionElement.SetAttribute("activationType", "background");
+					actionsElement.AppendChild(actionElement);
+				}
+				toastXml.DocumentElement.AppendChild(actionsElement);
+			}
 			var toast = new ToastNotification(toastXml) {
 				Tag = notification.Tag
 			};
+			toast.Dismissed += OnDismissed;
 			_notifications[notification.Tag] = notification;
 			_toasts[notification.Tag] = toast;
-			toast.Activated += OnActivated;
-			toast.Dismissed += OnDismissed;
 			_toastNotifier.Show(toast);
 		}
 
@@ -96,25 +109,24 @@ namespace NotifySync {
 			_toastNotifier.Hide(toast);
 		}
 
-		private void OnActivated(ToastNotification sender, object e) {
-			var args = (ToastActivatedEventArgs) e;
-			if (!_notifications.TryGetValue(sender.Tag, out var notification)) return;
-			var parts = args.Arguments.Split('=');
-			if (parts.Length == 2) {
-				var index = int.Parse(parts[1]);
-				string text = null;
-				if (parts[0] == "text-input") {
-					App.Current.Dispatcher.Invoke(() => {
-						text = TextInputDialog.Show(
-							notification.AppName,
-							notification.Actions.First(action => action.Index == index).Title,
-							Resources.Send
-						);
-					});
-				}
-				notification.ActivateAction(index, text);
-			} else {
-				notification.Activate();
+		private void HandleNotificationActivated(string invokedArgs, NotificationUserInput userInput) {
+			var args = new Dictionary<string, string>();
+			foreach (var arg in invokedArgs.Split('&')) {
+				var parts = arg.Split(new [] {'='}, 2);
+				var key = Uri.UnescapeDataString(parts[0]);
+				var value = Uri.UnescapeDataString(parts[1]);
+				args[key] = value;
+			}
+
+			if (!args.TryGetValue("tag", out var tag)) return;
+			if (!_notifications.TryGetValue(tag, out var notification)) return;
+			
+			if (args.TryGetValue("click", out var clickIndexStr)) {
+				notification.ActivateAction(int.Parse(clickIndexStr), null);
+			} else if (args.TryGetValue("text-input", out var inputIndexStr)) {
+				var inputIndex = int.Parse(inputIndexStr);
+				var inputText = userInput["input" + inputIndex];
+				notification.ActivateAction(inputIndex, inputText);
 			}
 		}
 		
@@ -141,176 +153,53 @@ namespace NotifySync {
 			return fileName;
 		}
 		
-		private static void CreateRegistryKey(string appId) {
-			using (
-				var regKey = Registry.CurrentUser.OpenSubKey(
-					"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Notifications\\Settings",
-					true
-				)
-			) {
-				using (var regSubKey = regKey.CreateSubKey(appId)) {
-					regSubKey.SetValue("ShowInActionCenter", 1, RegistryValueKind.DWord);
-				}
-			}
-		}
-
-		private void CreateShortcut(string appId, string appName, bool overrideIfExists) {
+		private void CreateShortcut<T>(string appId, string appName, bool overrideIfExists)
+			where T: NotificationActivator
+		{
 			var shortcutPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + 
 			                   "\\Microsoft\\Windows\\Start Menu\\Programs\\" + appName + ".lnk";
 			if (!overrideIfExists && File.Exists(shortcutPath)) return;
+			// ReSharper disable once PossibleNullReferenceException
 			var executablePath = Process.GetCurrentProcess().MainModule.FileName;
+			var toastActivatorClsidStr = $"{{{typeof(T).GUID.ToString().ToUpper()}}}";
 			
+			// ReSharper disable once SuspiciousTypeConversion.Global
 			var shortcut = (IShellLinkW) new CShellLink();
 			RequireSuccess(shortcut.SetPath(executablePath));
 			RequireSuccess(shortcut.SetArguments(""));
 
+			// ReSharper disable once SuspiciousTypeConversion.Global
 			var shortcutProperties = (IPropertyStore) shortcut;
-			using (var applicationId = new PropVariant(appId)) {
+			using (var applicationId = new PropVariant(appId))
+			using (var toastActivatorClsid = new PropVariant(toastActivatorClsidStr)) {
 				RequireSuccess(shortcutProperties.SetValue(SystemProperties.System.AppUserModel.ID, applicationId));
+				RequireSuccess(shortcutProperties.SetValue(SystemAppUserModelToastActivatorClsid, toastActivatorClsid));
 				RequireSuccess(shortcutProperties.Commit());
 			}
-
+			
+			// ReSharper disable once SuspiciousTypeConversion.Global
 			var shortcutFile = (IPersistFile) shortcut;
 			RequireSuccess(shortcutFile.Save(shortcutPath, true));
 		}
 
-		private void RequireSuccess(UInt32 hResult) {
+		private static void RequireSuccess(UInt32 hResult) {
 			if (hResult <= 1) return;
 			throw new Exception("Failed with HRESULT: " + hResult.ToString("X"));
 		}
-	}
 
-	internal enum STGM : long {
-		STGM_READ = 0x00000000L,
-		STGM_WRITE = 0x00000001L,
-		STGM_READWRITE = 0x00000002L,
-		STGM_SHARE_DENY_NONE = 0x00000040L,
-		STGM_SHARE_DENY_READ = 0x00000030L,
-		STGM_SHARE_DENY_WRITE = 0x00000020L,
-		STGM_SHARE_EXCLUSIVE = 0x00000010L,
-		STGM_PRIORITY = 0x00040000L,
-		STGM_CREATE = 0x00001000L,
-		STGM_CONVERT = 0x00020000L,
-		STGM_FAILIFTHERE = 0x00000000L,
-		STGM_DIRECT = 0x00000000L,
-		STGM_TRANSACTED = 0x00010000L,
-		STGM_NOSCRATCH = 0x00100000L,
-		STGM_NOSNAPSHOT = 0x00200000L,
-		STGM_SIMPLE = 0x08000000L,
-		STGM_DIRECT_SWMR = 0x00400000L,
-		STGM_DELETEONRELEASE = 0x04000000L,
-	}
-
-	internal static class ShellIIDGuid {
-		internal const string IShellLinkW = "000214F9-0000-0000-C000-000000000046";
-		internal const string CShellLink = "00021401-0000-0000-C000-000000000046";
-		internal const string IPersistFile = "0000010b-0000-0000-C000-000000000046";
-		internal const string IPropertyStore = "886D8EEB-8CF2-4446-8D02-CDBA1DBDCF99";
-	}
-
-	[ComImport,
-	 Guid(ShellIIDGuid.IShellLinkW),
-	 InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-	internal interface IShellLinkW {
-		UInt32 GetPath(
-			[Out(), MarshalAs(UnmanagedType.LPWStr)]
-			StringBuilder pszFile,
-			int cchMaxPath,
-			//ref _WIN32_FIND_DATAW pfd,
-			IntPtr pfd,
-			uint fFlags);
-
-		UInt32 GetIDList(out IntPtr ppidl);
-		UInt32 SetIDList(IntPtr pidl);
-
-		UInt32 GetDescription(
-			[Out(), MarshalAs(UnmanagedType.LPWStr)]
-			StringBuilder pszFile,
-			int cchMaxName);
-
-		UInt32 SetDescription(
-			[MarshalAs(UnmanagedType.LPWStr)] string pszName);
-
-		UInt32 GetWorkingDirectory(
-			[Out(), MarshalAs(UnmanagedType.LPWStr)]
-			StringBuilder pszDir,
-			int cchMaxPath
-		);
-
-		UInt32 SetWorkingDirectory(
-			[MarshalAs(UnmanagedType.LPWStr)] string pszDir);
-
-		UInt32 GetArguments(
-			[Out(), MarshalAs(UnmanagedType.LPWStr)]
-			StringBuilder pszArgs,
-			int cchMaxPath);
-
-		UInt32 SetArguments(
-			[MarshalAs(UnmanagedType.LPWStr)] string pszArgs);
-
-		UInt32 GetHotKey(out short wHotKey);
-		UInt32 SetHotKey(short wHotKey);
-		UInt32 GetShowCmd(out uint iShowCmd);
-		UInt32 SetShowCmd(uint iShowCmd);
-
-		UInt32 GetIconLocation(
-			[Out(), MarshalAs(UnmanagedType.LPWStr)]
-			out StringBuilder pszIconPath,
-			int cchIconPath,
-			out int iIcon);
-
-		UInt32 SetIconLocation(
-			[MarshalAs(UnmanagedType.LPWStr)] string pszIconPath,
-			int iIcon);
-
-		UInt32 SetRelativePath(
-			[MarshalAs(UnmanagedType.LPWStr)] string pszPathRel,
-			uint dwReserved);
-
-		UInt32 Resolve(IntPtr hwnd, uint fFlags);
-
-		UInt32 SetPath(
-			[MarshalAs(UnmanagedType.LPWStr)] string pszFile);
-	}
-
-	[ComImport,
-	 Guid(ShellIIDGuid.IPersistFile),
-	 InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-	internal interface IPersistFile {
-		UInt32 GetCurFile(
-			[Out(), MarshalAs(UnmanagedType.LPWStr)]
-			StringBuilder pszFile
-		);
-
-		UInt32 IsDirty();
-
-		UInt32 Load(
-			[MarshalAs(UnmanagedType.LPWStr)] string pszFileName,
-			[MarshalAs(UnmanagedType.U4)] STGM dwMode);
-
-		UInt32 Save(
-			[MarshalAs(UnmanagedType.LPWStr)] string pszFileName,
-			bool fRemember);
-
-		UInt32 SaveCompleted(
-			[MarshalAs(UnmanagedType.LPWStr)] string pszFileName);
-	}
-
-	[ComImport]
-	[Guid(ShellIIDGuid.IPropertyStore)]
-	[InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-	interface IPropertyStore {
-		UInt32 GetCount([Out] out uint propertyCount);
-		UInt32 GetAt([In] uint propertyIndex, out PropertyKey key);
-		UInt32 GetValue([In] ref PropertyKey key, [Out] PropVariant pv);
-		UInt32 SetValue([In] ref PropertyKey key, [In] PropVariant pv);
-		UInt32 Commit();
-	}
-
-
-	[ComImport,
-	 Guid(ShellIIDGuid.CShellLink),
-	 ClassInterface(ClassInterfaceType.None)]
-	internal class CShellLink {
+		// System.AppUserModel.ToastActivatorCLSID
+		public static PropertyKey SystemAppUserModelToastActivatorClsid => 
+			new PropertyKey(new Guid("{9F4C2855-9F79-4B39-A8D0-E1D42DE1D5F3}"), 26);
+		
+		[ClassInterface(ClassInterfaceType.None)]
+		[ComSourceInterfaces(typeof(INotificationActivationCallback))]
+		[Guid("DC92FD25-8C9F-4824-9A1A-B4E88BD2A1F9"), ComVisible(true)]
+		public class MyNotificationActivator: NotificationActivator {
+			public override void OnActivated(string invokedArgs, NotificationUserInput userInput, string appUserModelId) {
+				Application.Current.Dispatcher.Invoke(() => {
+					Instance?.HandleNotificationActivated(invokedArgs, userInput);
+				});
+			}
+		}
 	}
 }
