@@ -64,8 +64,6 @@ namespace NotifySync {
 			}
 			if (notification.Tag == null) {
 				notification.Tag = "#" + _toastIdGenerator.GetId(notification, out _);
-			} else if (notification.Tag.StartsWith("#")) {
-				notification.Tag = "#" + notification.Tag;
 			}
 			if (notification.Actions.Length > 0) {
 				var actionsElement = toastXml.CreateElement("actions");
@@ -94,8 +92,11 @@ namespace NotifySync {
 				Tag = notification.Tag
 			};
 			toast.Dismissed += OnDismissed;
-			_notifications[notification.Tag] = notification;
+			if (_toasts.TryGetValue(notification.Tag, out var oldToast)) {
+				_toastNotifier.Hide(oldToast);
+			}
 			_toasts[notification.Tag] = toast;
+			_notifications[notification.Tag] = notification;
 			_toastNotifier.Show(toast);
 		}
 

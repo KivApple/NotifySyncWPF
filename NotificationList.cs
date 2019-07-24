@@ -6,13 +6,12 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media.Imaging;
 using Newtonsoft.Json.Linq;
-using NotifySync.Properties;
 
 namespace NotifySync {
 	public class NotificationList {
 		private readonly ObservableCollection<NotificationItem> _notifications = new ObservableCollection<NotificationItem>();
 		public ReadOnlyObservableCollection<NotificationItem> Notifications { get; }
-
+		
 		public NotificationList() {
 			Notifications = new ReadOnlyObservableCollection<NotificationItem>(_notifications);
 		}
@@ -63,9 +62,11 @@ namespace NotifySync {
 								return new NotificationItem.Action(index, aTitle, isTextInput);
 							}).ToArray()
 						};
+						NotificationItem oldNotificationItem = null;
 						int i;
 						for (i = 0; i < _notifications.Count; i++) {
 							if (_notifications[i].Key != item.Key) continue;
+							oldNotificationItem = _notifications[i];
 							_notifications[i] = item;
 							break;
 						}
@@ -107,6 +108,9 @@ namespace NotifySync {
 								});
 							});
 						};
+						if (oldNotificationItem?.SystemNotificationTag != null) {
+							systemNotification.Tag = oldNotificationItem.SystemNotificationTag;
+						}
 						App.SystemNotifier.ShowNotification(systemNotification);
 						item.SystemNotificationTag = systemNotification.Tag;
 					});
