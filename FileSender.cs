@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
@@ -11,9 +10,14 @@ namespace NotifySync {
 		
 		private readonly RemoteDevice _device;
 		private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
+		private bool _cancel;
 		
 		public FileSender(RemoteDevice device) {
 			_device = device;
+		}
+
+		public void CancelSending() {
+			_cancel = true;
 		}
 		
 		public void SendFiles(params string[] paths) {
@@ -21,6 +25,7 @@ namespace NotifySync {
 				await _semaphore.WaitAsync();
 				try {
 					var connection = _device.CurrentConnection;
+					_cancel = false;
 					if (connection != null) {
 						foreach (var path in paths) {
 							if (!await DoSendFile(connection, path)) {
@@ -49,14 +54,15 @@ namespace NotifySync {
 						Title = fileName,
 						Text = string.Format(Properties.Resources.SendingFileTo, _device.Name)
 					};
-					await App.RunOnUiThreadAsync(() => {
-						App.SystemNotifier.ShowNotification(notification);
-					});
+					await App.RunOnUiThreadAsync(() => { App.SystemNotifier.ShowNotification(notification); });
 					try {
 						var buffer = new byte[SendBufferSize];
 						int count;
 						do {
 							count = await fileStream.ReadAsync(buffer, 0, buffer.Length);
+							if (_cancel) {
+								throw new CancellationException();
+							}
 							var base64String = Convert.ToBase64String(buffer, 0, count);
 							await connection.SendJson(new JObject {
 								["type"] = "file",
@@ -74,15 +80,18 @@ namespace NotifySync {
 								["type"] = "file",
 								["status"] = "cancel"
 							});
-						} catch (Exception) {
+						}
+						catch (Exception) {
 							// Ignore
 						}
+
 						throw;
 					} finally {
 						await App.RunOnUiThreadAsync(() => {
 							App.SystemNotifier.DismissNotification(notification.Tag);
 						});
 					}
+
 					await App.RunOnUiThreadAsync(() => {
 						App.SystemNotifier.ShowNotification(new SystemNotification {
 							Title = fileName,
@@ -98,8 +107,13 @@ namespace NotifySync {
 					});
 				});
 				return false;
+			} catch (CancellationException) {
+				return false;
 			}
 			return true;
+		}
+
+		private class CancellationException : Exception {
 		}
 	}
 }

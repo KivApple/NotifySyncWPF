@@ -174,6 +174,9 @@ namespace NotifySync {
 					case "notification":
 						await RemoteDevice.NotificationList.HandleJson(this, json);
 						break;
+					case "cancel-file":
+						RemoteDevice.FileSender.CancelSending();
+						break;
 				}
 			}
 

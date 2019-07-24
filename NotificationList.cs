@@ -28,7 +28,7 @@ namespace NotifySync {
 		}
 
 		public async Task HandleJson(RemoteDevice.Connection connection, dynamic json) {
-			RemoteDevice device = connection.RemoteDevice;
+			var device = connection.RemoteDevice;
 			string action = json.action;
 			switch (action) {
 				case "posted": {
