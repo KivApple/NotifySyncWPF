@@ -25,6 +25,7 @@ namespace NotifySync {
 		public BatteryStatus BatteryStatus { get; }
 		public NotificationList NotificationList { get; }
 		public FileSender FileSender { get; }
+		public FileReceiver FileReceiver { get; }
 		
 		public RemoteDevice(byte[] key) {
             Key = key;
@@ -33,6 +34,7 @@ namespace NotifySync {
 			BatteryStatus = new BatteryStatus();
 			NotificationList = new NotificationList();
 			FileSender = new FileSender(this);
+			FileReceiver = new FileReceiver(this);
 		}
 
 		public bool AcceptBroadcast(byte[] packetData) {
@@ -159,6 +161,7 @@ namespace NotifySync {
 				RemoteDevice.NotifyPropertyChanged("IsConnected");
 				RemoteDevice.NotifyPropertyChanged("CurrentIpAddress");
 
+				await RemoteDevice.FileReceiver.HandleDisconnect();
 				await RemoteDevice.NotificationList.HandleDisconnect();
 				RemoteDevice.BatteryStatus.HandleDisconnect();
 				RemoteDevice.NotifyPropertyChanged("BatteryStatus");
@@ -176,6 +179,9 @@ namespace NotifySync {
 						break;
 					case "cancel-file":
 						RemoteDevice.FileSender.CancelSending();
+						break;
+					case "file":
+						await RemoteDevice.FileReceiver.HandleJson(json);
 						break;
 				}
 			}

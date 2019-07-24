@@ -96,8 +96,10 @@
     <Compile Include="BatteryLevelConverter.cs" />
     <Compile Include="BatteryStatus.cs" />
     <Compile Include="BatteryStatusIconConverter.cs" />
+    <Compile Include="FileReceiver.cs" />
     <Compile Include="FileSender.cs" />
     <Compile Include="ISystemNotifier.cs" />
+    <Compile Include="KnownFolders.cs" />
     <Compile Include="NotificationList.cs" />
     <Compile Include="ProtocolServer.cs" />
     <Compile Include="RemoteDevice.cs" />

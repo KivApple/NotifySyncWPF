@@ -187,4 +187,16 @@
   <data name="EnableEncryption" xml:space="preserve">
     <value>Enable end-to-end encryption (recommended)</value>
   </data>
+  <data name="ReceivingFileFrom" xml:space="preserve">
+    <value>Receiving file from {0}</value>
+  </data>
+  <data name="FileReceivedFrom" xml:space="preserve">
+    <value>File received from {0}</value>
+  </data>
+  <data name="Open" xml:space="preserve">
+    <value>Open</value>
+  </data>
+  <data name="ShowInFolder" xml:space="preserve">
+    <value>Show in folder</value>
+  </data>
 </root>
