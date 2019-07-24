@@ -103,7 +103,7 @@ namespace NotifySync {
 		}
 
 		public class Connection {
-			private const int ReconnectDelay = 2000;
+			//private const int ReconnectDelay = 2000;
 			
 			public readonly RemoteDevice RemoteDevice;
 			//private bool _wasConnected;
