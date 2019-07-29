@@ -107,7 +107,7 @@ namespace NotifySync {
 			
 			public readonly RemoteDevice RemoteDevice;
 			//private bool _wasConnected;
-			private readonly TcpClient _tcpClient = new TcpClient();
+			private TcpClient _tcpClient;
 			private NetworkStream _networkStream;
 			private readonly SemaphoreSlim _sendSemaphore = new SemaphoreSlim(1, 1);
 			private readonly byte[] _packetLengthBytes = new byte[2];
@@ -131,6 +131,7 @@ namespace NotifySync {
 
 			private async Task Connect(IPAddress ipAddress) {
 				try {
+					_tcpClient = new TcpClient();
 					await _tcpClient.ConnectAsync(ipAddress, ProtocolServer.TcpPort);
 					_tcpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
 					_networkStream = _tcpClient.GetStream();

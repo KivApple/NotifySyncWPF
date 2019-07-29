@@ -137,5 +137,13 @@ namespace NotifySync {
 			if (dialog.ShowDialog(this) != true) return;
 			SelectedRemoteDevice.FileSender.SendFiles(dialog.FileNames);
 		}
+
+		private void DeviceTab_OnDrop(object sender, DragEventArgs e) {
+			if (SelectedRemoteDevice == null) return;
+			if (!SelectedRemoteDevice.IsConnected) return;
+			if (!e.Data.GetDataPresent(DataFormats.FileDrop)) return;
+			var fileNames = (string[]) e.Data.GetData(DataFormats.FileDrop);
+			SelectedRemoteDevice.FileSender.SendFiles(fileNames);
+		}
 	}
 }

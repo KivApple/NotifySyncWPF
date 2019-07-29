@@ -125,7 +125,10 @@
             </TabItem>
             <TabItem
 				Header="Device" 
-				Visibility="Collapsed">
+				Visibility="Collapsed"
+				Drop="DeviceTab_OnDrop"
+				AllowDrop="{Binding Path=SelectedRemoteDevice.IsConnected, 
+				RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=Window}}">
 				
 				<Grid>
 					<DockPanel VerticalAlignment="Top" LastChildFill="True">
