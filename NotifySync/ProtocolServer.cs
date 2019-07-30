@@ -97,7 +97,7 @@ namespace NotifySync {
 			}
 		}
 
-		private void SendBroadcasts() {
+		public void SendBroadcasts() {
 			var addresses = NetworkInterface.GetAllNetworkInterfaces()
 				.SelectMany(it => it.GetIPProperties().UnicastAddresses
 					.Where(address => address.Address.AddressFamily == AddressFamily.InterNetwork)

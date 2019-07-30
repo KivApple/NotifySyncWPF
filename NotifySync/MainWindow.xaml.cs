@@ -17,9 +17,11 @@ namespace NotifySync {
 		public RemoteDevice SelectedRemoteDevice => _selectedRemoteDevice;
 		public event PropertyChangedEventHandler PropertyChanged;
 		public bool CanClose = false;
+		private bool _shown = false;
 		
 		public MainWindow() {
 			InitializeComponent(); 
+			
 			DevicesListBox.ItemsSource = App.ProtocolServer.PairedDevices;
 			(App.ProtocolServer.PairedDevices as INotifyCollectionChanged).CollectionChanged += 
 				PairedDevices_OnCollectionChanged;
@@ -35,6 +37,20 @@ namespace NotifySync {
 				)
 			) AutoStartCheckBox.IsChecked = regKey.GetValue("NotifySync") != null;
 			AutoStartCheckBox.Checked += AutoStartCheckBox_Checked;
+		}
+
+		protected override void OnContentRendered(EventArgs e) {
+			base.OnContentRendered(e);
+			if (_shown) return;
+			_shown = true;
+			App.ProtocolServer.SendBroadcasts();
+		}
+		
+		private void Window_Closing(object sender, CancelEventArgs e) {
+			_shown = false;
+			if (CanClose) return;
+			e.Cancel = true;
+			Hide();
 		}
 		
 		private void GeneralSettingsButton_OnClick(object sender, RoutedEventArgs e) {
@@ -112,12 +128,6 @@ namespace NotifySync {
 				bitmapImage.Freeze();
 				NewDeviceQrCodeImage.Source = bitmapImage;
 			}
-		}
-
-		private void Window_Closing(object sender, CancelEventArgs e) {
-			if (CanClose) return;
-			e.Cancel = true;
-			Hide();
 		}
 
 		public void ShowDevice(RemoteDevice device) {
