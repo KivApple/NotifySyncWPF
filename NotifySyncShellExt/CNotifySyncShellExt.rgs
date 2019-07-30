@@ -1,0 +1,33 @@
+HKCR {
+	NoRemove CLSID {
+		ForceRemove {4430d43b-3d4f-4c6e-b24c-6ad3293dc86b} = s 'CNotifySyncShellExt class' {
+			InprocServer32 = s '%MODULE%' {
+				val ThreadingModel = s 'Apartment'
+			}
+			Version = s '1.0'
+		}
+	}
+	NoRemove * {
+		NoRemove ShellEx {
+			NoRemove ContextMenuHandlers {
+				ForceRemove NotifySyncShellExt = s '{4430d43b-3d4f-4c6e-b24c-6ad3293dc86b}'
+			}
+		}
+	}
+}
+
+HKLM {
+	NoRemove Software {
+		NoRemove Microsoft {
+			NoRemove Windows {
+				NoRemove CurrentVersion {
+					NoRemove 'Shell Extensions' {
+						NoRemove Approved {
+							ForceRemove val '{4430d43b-3d4f-4c6e-b24c-6ad3293dc86b}' = s 'NotifySync shell extension'
+						}
+					}
+				}
+			}
+		}
+	}
+}

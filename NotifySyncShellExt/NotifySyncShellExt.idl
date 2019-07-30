@@ -1,0 +1,21 @@
+import "oaidl.idl";
+import "ocidl.idl";
+
+[
+	uuid(7fb6a0b9-8da1-4a0b-9b8e-f3309eb7e62c),
+	version(1.0),
+]
+library NotifySyncShellExtLib
+{
+	importlib("stdole2.tlb");
+	[
+		uuid(4430d43b-3d4f-4c6e-b24c-6ad3293dc86b)
+	]
+	coclass CNotifySyncShellExt
+	{
+		interface IShellExtInit;
+		interface IContextMenu;
+	};
+};
+
+import "shobjidl.idl";
