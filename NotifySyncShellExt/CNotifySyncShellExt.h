@@ -41,7 +41,6 @@ public:
 private:
 	UINT m_fileNameCount;
 	TCHAR** m_fileNames;
-	UINT m_firstCmd;
 	UINT m_deviceCount;
 	TCHAR** m_deviceIds;
 

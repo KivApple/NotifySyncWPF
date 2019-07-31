@@ -1,6 +1,8 @@
 #include "pch.h"
 #include "CNotifySyncShellExt.h"
 
+#define NAMED_PIPE_NAME "\\\\.\\pipe\\NotifySync"
+
 CNotifySyncShellExt::CNotifySyncShellExt() {
 	m_fileNameCount = 0;
 	m_fileNames = NULL;
@@ -66,9 +68,8 @@ STDMETHODIMP CNotifySyncShellExt::QueryContextMenu(HMENU hMenu, UINT uMenuIndex,
 			return MAKE_HRESULT(SEVERITY_SUCCESS, FACILITY_NULL, 0);
 		}
 	}
-	m_firstCmd = uidFirstCmd;
 	HMENU hSubMenu = CreateMenu();
-	HANDLE hPipe = CreateFile(TEXT("\\\\.\\pipe\\NotifySync"), GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
+	HANDLE hPipe = CreateFile(TEXT(NAMED_PIPE_NAME), GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
 	if (hPipe != INVALID_HANDLE_VALUE) {
 		WriteString(hPipe, TEXT("device-list"));
 		m_deviceCount = ReadUInt(hPipe);
@@ -105,7 +106,7 @@ STDMETHODIMP CNotifySyncShellExt::InvokeCommand(LPCMINVOKECOMMANDINFO pCmdInfo) 
 	if (command >= m_deviceCount) {
 		return E_INVALIDARG;
 	}
-	HANDLE hPipe = CreateFile(TEXT("\\\\.\\pipe\\NotifySync"), GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
+	HANDLE hPipe = CreateFile(TEXT(NAMED_PIPE_NAME), GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
 	if (hPipe != INVALID_HANDLE_VALUE) {
 		WriteString(hPipe, TEXT("send-files"));
 		WriteString(hPipe, m_deviceIds[command]);
