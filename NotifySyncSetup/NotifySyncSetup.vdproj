@@ -992,6 +992,14 @@
             "PrerequisitesLocation" = "2:1"
             "Url" = "8:"
             "ComponentsUrl" = "8:"
+                "Items"
+                {
+                    "{EDC2488A-8267-493A-A98E-7D9C3B36CDF3}:.NETFramework,Version=v4.6.1"
+                    {
+                    "Name" = "8:Microsoft .NET Framework 4.6.1 (x86 and x64)"
+                    "ProductCode" = "8:.NETFramework,Version=v4.6.1"
+                    }
+                }
             }
         }
         "Release"
@@ -1467,7 +1475,7 @@
             "SharedLegacy" = "11:FALSE"
             "PackageAs" = "3:1"
             "Register" = "3:1"
-            "Exclude" = "11:TRUE"
+            "Exclude" = "11:FALSE"
             "IsDependency" = "11:TRUE"
             "IsolateTo" = "8:"
             }
@@ -1715,7 +1723,7 @@
             "SharedLegacy" = "11:FALSE"
             "PackageAs" = "3:1"
             "Register" = "3:1"
-            "Exclude" = "11:TRUE"
+            "Exclude" = "11:FALSE"
             "IsDependency" = "11:TRUE"
             "IsolateTo" = "8:"
             }
@@ -3273,7 +3281,7 @@
         "Name" = "8:Microsoft Visual Studio"
         "ProductName" = "8:NotifySync"
         "ProductCode" = "8:{1FA50808-AE0F-4263-960D-BCB9BFF24235}"
-        "PackageCode" = "8:{1B1B0377-B0D6-40D4-B0EC-CA4746DF2795}"
+        "PackageCode" = "8:{EC2E7A37-F219-4E73-B294-A1A7113AC865}"
         "UpgradeCode" = "8:{9AF32420-BD99-45CB-A6B6-D392D1894685}"
         "AspNetVersion" = "8:"
         "RestartWWWService" = "11:FALSE"
