@@ -1475,7 +1475,7 @@
             "SharedLegacy" = "11:FALSE"
             "PackageAs" = "3:1"
             "Register" = "3:1"
-            "Exclude" = "11:FALSE"
+            "Exclude" = "11:TRUE"
             "IsDependency" = "11:TRUE"
             "IsolateTo" = "8:"
             }
@@ -1723,7 +1723,7 @@
             "SharedLegacy" = "11:FALSE"
             "PackageAs" = "3:1"
             "Register" = "3:1"
-            "Exclude" = "11:FALSE"
+            "Exclude" = "11:TRUE"
             "IsDependency" = "11:TRUE"
             "IsolateTo" = "8:"
             }
@@ -3281,7 +3281,7 @@
         "Name" = "8:Microsoft Visual Studio"
         "ProductName" = "8:NotifySync"
         "ProductCode" = "8:{1FA50808-AE0F-4263-960D-BCB9BFF24235}"
-        "PackageCode" = "8:{EC2E7A37-F219-4E73-B294-A1A7113AC865}"
+        "PackageCode" = "8:{F4A38B7D-A699-42F1-8EC5-E958E7C59EC5}"
         "UpgradeCode" = "8:{9AF32420-BD99-45CB-A6B6-D392D1894685}"
         "AspNetVersion" = "8:"
         "RestartWWWService" = "11:FALSE"

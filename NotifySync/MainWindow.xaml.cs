@@ -13,8 +13,6 @@ using QRCoder;
 namespace NotifySync {
 	public partial class MainWindow: Window, INotifyPropertyChanged {
 		public static MainWindow Instance { get; private set; }
-		private RemoteDevice _selectedRemoteDevice = null;
-		public RemoteDevice SelectedRemoteDevice => _selectedRemoteDevice;
 		public event PropertyChangedEventHandler PropertyChanged;
 		public bool CanClose = false;
 		private bool _shown = false;
@@ -25,6 +23,7 @@ namespace NotifySync {
 			DevicesListBox.ItemsSource = App.ProtocolServer.PairedDevices;
 			(App.ProtocolServer.PairedDevices as INotifyCollectionChanged).CollectionChanged += 
 				PairedDevices_OnCollectionChanged;
+			Deactivated += Window_Deactivated;
 			Closing += Window_Closing;
 			if (App.StartMinimized) {
 				Hide();
@@ -37,6 +36,11 @@ namespace NotifySync {
 				)
 			) AutoStartCheckBox.IsChecked = regKey.GetValue("NotifySync") != null;
 			AutoStartCheckBox.Checked += AutoStartCheckBox_Checked;
+
+			if (App.ProtocolServer.PairedDevices.Count == 0) {
+				PairNewDevicePanel.Visibility = Visibility.Visible;
+				GenerateNewDeviceQrCode();
+			}
 		}
 
 		protected override void OnContentRendered(EventArgs e) {
@@ -52,11 +56,19 @@ namespace NotifySync {
 			e.Cancel = true;
 			Hide();
 		}
+
+		private void Window_Deactivated(object sender, EventArgs e) {
+			if (WindowStyle == WindowStyle.None) {
+				Hide();
+			}
+		}
 		
 		private void GeneralSettingsButton_OnClick(object sender, RoutedEventArgs e) {
-			App.ProtocolServer.CancelPairing();
-			DevicesListBox.SelectedIndex = -1;
-			SectionsTabControl.SelectedIndex = 0;
+			if (GeneralSettingsPanel.Visibility != Visibility.Visible) {
+				GeneralSettingsPanel.Visibility = Visibility.Visible;
+			} else {
+				GeneralSettingsPanel.Visibility = Visibility.Collapsed;
+			}
 		}
 
 		private void AutoStartCheckBox_Checked(object sender, RoutedEventArgs e) {
@@ -76,24 +88,14 @@ namespace NotifySync {
 				}
 			}
 		}
-		
+
 		private void PairNewDeviceButton_OnClick(object sender, RoutedEventArgs e) {
-			DevicesListBox.SelectedIndex = -1;
-			SectionsTabControl.SelectedIndex = 1;
-			GenerateNewDeviceQrCode();
-		}
-		
-		private void DevicesListBox_OnSelectionChanged(object sender, SelectionChangedEventArgs e) {
-			if (DevicesListBox.SelectedIndex >= 0) {
-				SectionsTabControl.SelectedIndex = 2;
-				_selectedRemoteDevice = DevicesListBox.SelectedItem as RemoteDevice;
-				NotifyPropertyChanged("SelectedRemoteDevice");
-			}
-		}
-		
-		private void PairedDevices_OnCollectionChanged(object sender, NotifyCollectionChangedEventArgs e) {
-			if (e.NewItems != null && e.NewItems.Count > 0) {
-				DevicesListBox.SelectedIndex = e.NewStartingIndex;
+			if (PairNewDevicePanel.Visibility != Visibility.Visible) {
+				GenerateNewDeviceQrCode();
+				PairNewDevicePanel.Visibility = Visibility.Visible;
+			} else {
+				PairNewDevicePanel.Visibility = Visibility.Collapsed;
+				App.ProtocolServer.CancelPairing();
 			}
 		}
 
@@ -102,7 +104,7 @@ namespace NotifySync {
 		}
 		
 		private void UnpairDeviceButton_OnClick(object sender, RoutedEventArgs e) {
-			var device = SelectedRemoteDevice;
+			var device = (sender as Button).DataContext as RemoteDevice;
 			if (device == null) return;
 			var result = MessageBox.Show(
 				String.Format(Properties.Resources.AreYouSureUnpair, device.Name), 
@@ -133,12 +135,6 @@ namespace NotifySync {
 				NewDeviceQrCodeImage.Source = bitmapImage;
 			}
 		}
-
-		public void ShowDevice(RemoteDevice device) {
-			// TODO: Fix it because it doesn't work
-			DevicesListBox.SelectedItems.Clear();
-			DevicesListBox.SelectedItems.Add(device);
-		}
 		
 		private void NotifyPropertyChanged([CallerMemberName] string propertyName = "") {
 			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
@@ -149,15 +145,19 @@ namespace NotifySync {
 				Multiselect = true
 			};
 			if (dialog.ShowDialog(this) != true) return;
-			SelectedRemoteDevice.FileSender.SendFiles(dialog.FileNames);
+			((sender as Button).DataContext as RemoteDevice).FileSender.SendFiles(dialog.FileNames);
 		}
 
-		private void DeviceTab_OnDrop(object sender, DragEventArgs e) {
-			if (SelectedRemoteDevice == null) return;
-			if (!SelectedRemoteDevice.IsConnected) return;
+		private void DeviceItemGrid_OnDrop(object sender, DragEventArgs e) {
 			if (!e.Data.GetDataPresent(DataFormats.FileDrop)) return;
 			var fileNames = (string[]) e.Data.GetData(DataFormats.FileDrop);
-			SelectedRemoteDevice.FileSender.SendFiles(fileNames);
+			((sender as Grid).DataContext as RemoteDevice).FileSender.SendFiles(fileNames);
+		}
+		
+		private void PairedDevices_OnCollectionChanged(object sender, NotifyCollectionChangedEventArgs e) {
+			if (e.NewItems != null && e.NewItems.Count > 0) {
+				PairNewDevicePanel.Visibility = Visibility.Collapsed;
+			}
 		}
 	}
 }

@@ -62,7 +62,7 @@ namespace NotifySync {
 				MenuItems = {
 					{
 						NotifySync.Properties.Resources.Show,
-						(sender, e) => ShowMainWindow()
+						(sender, e) => ShowMainWindow(false)
 					}, {
 						NotifySync.Properties.Resources.Exit,
 						(sender, e) => {
@@ -79,18 +79,56 @@ namespace NotifySync {
 				ContextMenu = contextMenu,
 				Visible = true
 			};
-			NotifyIcon.Click += (sender, e) => ShowMainWindow();
-			NotifyIcon.DoubleClick += (sender, e) => ShowMainWindow();
+			NotifyIcon.Click += (sender, e) => ShowMainWindow(true);
+			NotifyIcon.DoubleClick += (sender, e) => ShowMainWindow(false);
 		}
 
-		private static void ShowMainWindow() {
-			NotifySync.MainWindow.Instance.Show();
-			NotifySync.MainWindow.Instance.Activate();
-		}
+		private static void ShowMainWindow(bool popup) {
+			var window = NotifySync.MainWindow.Instance;
+			var scale = PresentationSource.FromVisual(window).CompositionTarget.TransformToDevice.M11;
+			var position = Control.MousePosition;
+			var workingArea = Screen.FromPoint(position).WorkingArea;
+			workingArea.Width = (int) (workingArea.Width / scale);
+			workingArea.Height = (int) (workingArea.Height / scale);
+			workingArea.X = (int) (workingArea.X / scale);
+			workingArea.Y = (int) (workingArea.Y / scale);
 
-		public static void ShowDeviceWindow(RemoteDevice device) {
-			NotifySync.MainWindow.Instance.ShowDevice(device);
-			ShowMainWindow();
+			if (popup) {
+				window.WindowStyle = WindowStyle.None;
+			} else {
+				window.WindowStyle = WindowStyle.SingleBorderWindow;
+			}
+
+			double left;
+			double top;
+
+			if (popup) {
+				left = position.X / scale - window.Width / 2;
+				top = position.Y / scale - window.Height;
+				if (top + window.Height > workingArea.Bottom) {
+					top = workingArea.Bottom - window.Height;
+				}
+
+				if (top < workingArea.Top) {
+					top = workingArea.Top;
+				}
+
+				if (left + window.Width > workingArea.Right) {
+					left = workingArea.Right - window.Width;
+				}
+
+				if (left < workingArea.Left) {
+					left = workingArea.Left;
+				}
+			} else {
+				left = workingArea.Left + (workingArea.Width - window.Width) / 2;
+				top = workingArea.Top + (workingArea.Height - window.Height) / 2;
+			}
+
+			window.Left = left;
+			window.Top = top;
+			window.Show();
+			window.Activate();
 		}
 
 		public static async Task RunOnUiThreadAsync(Action action) {
@@ -111,7 +149,7 @@ namespace NotifySync {
 			}
 
 			if (!minimized) {
-				ShowMainWindow();
+				ShowMainWindow(false);
 			}
 			return true;
 		}
