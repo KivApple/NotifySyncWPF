@@ -94,8 +94,14 @@ namespace NotifySync {
 			workingArea.Y = (int) (workingArea.Y / scale);
 
 			if (popup) {
+				window.Topmost = true;
+				window.ShowInTaskbar = false;
+				window.BorderThickness = new Thickness(1);
 				window.WindowStyle = WindowStyle.None;
 			} else {
+				window.Topmost = false;
+				window.ShowInTaskbar = true;
+				window.BorderThickness = new Thickness(0);
 				window.WindowStyle = WindowStyle.SingleBorderWindow;
 			}
 

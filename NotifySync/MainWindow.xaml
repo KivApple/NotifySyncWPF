@@ -9,9 +9,8 @@
 	xmlns:mi="clr-namespace:MaterialIcons;assembly=MaterialIcons"
 	mc:Ignorable="d"
 	Title="{x:Static res:Resources.AppName}"
-	Topmost="True"
-	ShowInTaskbar="False"
 	WindowStartupLocation="CenterScreen"
+	ResizeMode="CanMinimize"
 	Height="420"
 	Width="600">
 
