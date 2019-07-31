@@ -4,6 +4,8 @@
 CNotifySyncShellExt::CNotifySyncShellExt() {
 	m_fileNameCount = 0;
 	m_fileNames = NULL;
+	m_deviceCount = 0;
+	m_deviceIds = NULL;
 }
 
 HRESULT CNotifySyncShellExt::FinalConstruct() {
@@ -17,6 +19,12 @@ void CNotifySyncShellExt::FinalRelease() {
 	delete[] m_fileNames;
 	m_fileNames = NULL;
 	m_fileNameCount = 0;
+	for (UINT i = 0; i < m_deviceCount; i++) {
+		delete[] m_deviceIds[i];
+	}
+	delete[] m_deviceIds;
+	m_deviceIds = NULL;
+	m_deviceCount = 0;
 }
 
 STDMETHODIMP CNotifySyncShellExt::Initialize(LPCITEMIDLIST pidlFolder, LPDATAOBJECT pDataObj, HKEY hProgID) {
@@ -52,9 +60,32 @@ STDMETHODIMP CNotifySyncShellExt::QueryContextMenu(HMENU hMenu, UINT uMenuIndex,
 	if (uFlags & CMF_DEFAULTONLY) {
 		return MAKE_HRESULT(SEVERITY_SUCCESS, FACILITY_NULL, 0);
 	}
+	for (UINT i = 0; i < m_fileNameCount; i++) {
+		DWORD attrs = GetFileAttributes(m_fileNames[i]);
+		if (attrs & FILE_ATTRIBUTE_DIRECTORY) {
+			return MAKE_HRESULT(SEVERITY_SUCCESS, FACILITY_NULL, 0);
+		}
+	}
+	m_firstCmd = uidFirstCmd;
 	HMENU hSubMenu = CreateMenu();
-	AppendMenu(hSubMenu, MF_GRAYED, 0, _T("Not connected to any device"));
-	// TODO
+	HANDLE hPipe = CreateFile(TEXT("\\\\.\\pipe\\NotifySync"), GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
+	if (hPipe != INVALID_HANDLE_VALUE) {
+		WriteString(hPipe, TEXT("device-list"));
+		m_deviceCount = ReadUInt(hPipe);
+		m_deviceIds = new TCHAR*[m_deviceCount];
+		for (UINT i = 0; i < m_deviceCount; i++) {
+			m_deviceIds[i] = ReadString(hPipe);
+			TCHAR* deviceName = ReadString(hPipe);
+			TCHAR buffer[512];
+			wnsprintf(buffer, sizeof(buffer) / sizeof(buffer[0]), _T("Send to %s"), deviceName);
+			AppendMenu(hSubMenu, 0, uidFirstCmd + i, buffer);
+			delete[] deviceName;
+		}
+		CloseHandle(hPipe);
+	}
+	if (m_deviceCount == 0) {
+		AppendMenu(hSubMenu, MF_GRAYED, 0, _T("Not connected to any device"));
+	}
 	InsertMenu(hMenu, uMenuIndex, MF_BYPOSITION | MF_POPUP, (UINT_PTR) hSubMenu, _T("NotifySync"));
 	return MAKE_HRESULT(SEVERITY_SUCCESS, FACILITY_NULL, 1);
 }
@@ -64,9 +95,67 @@ STDMETHODIMP CNotifySyncShellExt::GetCommandString(UINT_PTR idCmd, UINT uFlags, 
 }
 
 STDMETHODIMP CNotifySyncShellExt::InvokeCommand(LPCMINVOKECOMMANDINFO pCmdInfo) {
+	if (HIWORD(pCmdInfo->lpVerb) != 0) {
+		return E_INVALIDARG;
+	}
 	if (m_fileNameCount == 0) {
 		return E_INVALIDARG;
 	}
-	MessageBox(pCmdInfo->hwnd, m_fileNames[0], _T("NotifySync"), MB_ICONINFORMATION);
+	UINT command = LOWORD(pCmdInfo->lpVerb);
+	if (command >= m_deviceCount) {
+		return E_INVALIDARG;
+	}
+	HANDLE hPipe = CreateFile(TEXT("\\\\.\\pipe\\NotifySync"), GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
+	if (hPipe != INVALID_HANDLE_VALUE) {
+		WriteString(hPipe, TEXT("send-files"));
+		WriteString(hPipe, m_deviceIds[command]);
+		WriteUInt(hPipe, m_fileNameCount);
+		for (UINT i = 0; i < m_fileNameCount; i++) {
+			WriteString(hPipe, m_fileNames[i]);
+		}
+		CloseHandle(hPipe);
+	}
 	return S_OK;
+}
+
+void CNotifySyncShellExt::ReadBytes(HANDLE hFile, void* buffer, size_t count) {
+	DWORD realCount;
+	ReadFile(hFile, buffer, (DWORD) count, &realCount, NULL);
+}
+
+UINT CNotifySyncShellExt::ReadUInt(HANDLE hFile) {
+	UINT value;
+	ReadBytes(hFile, &value, sizeof(value));
+	return value;
+}
+
+TCHAR* CNotifySyncShellExt::ReadString(HANDLE hFile) {
+	UINT count = ReadUInt(hFile);
+	char* bytes = new char[count + 1];
+	ReadBytes(hFile, bytes, count);
+	bytes[count] = '\0';
+	int byteCount = MultiByteToWideChar(CP_UTF8, 0, bytes, -1, NULL, 0);
+	TCHAR* string = new TCHAR[byteCount];
+	MultiByteToWideChar(CP_UTF8, 0, bytes, -1, string, byteCount);
+	delete[] bytes;
+	return string;
+}
+
+void CNotifySyncShellExt::WriteBytes(HANDLE hFile, const void* buffer, size_t count) {
+	DWORD realCount;
+	WriteFile(hFile, buffer, count, &realCount, NULL);
+}
+
+void CNotifySyncShellExt::WriteUInt(HANDLE hFile, UINT value) {
+	WriteBytes(hFile, &value, sizeof(value));
+}
+
+void CNotifySyncShellExt::WriteString(HANDLE hFile, const TCHAR* value) {
+	int count = WideCharToMultiByte(CP_UTF8, 0, value, -1, NULL, 0, NULL, NULL);
+	char* bytes = new char[count + 1];
+	WideCharToMultiByte(CP_UTF8, 0, value, -1, bytes, count + 1, NULL, NULL);
+	UINT byteCount = strlen(bytes);
+	WriteUInt(hFile, byteCount);
+	WriteBytes(hFile, bytes, byteCount);
+	delete[] bytes;
 }

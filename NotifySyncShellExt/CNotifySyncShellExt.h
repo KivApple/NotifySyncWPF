@@ -41,6 +41,16 @@ public:
 private:
 	UINT m_fileNameCount;
 	TCHAR** m_fileNames;
+	UINT m_firstCmd;
+	UINT m_deviceCount;
+	TCHAR** m_deviceIds;
+
+	void ReadBytes(HANDLE hFile, void *buffer, size_t count);
+	UINT ReadUInt(HANDLE hFile);
+	TCHAR* ReadString(HANDLE hFile);
+	void WriteBytes(HANDLE hFile, const void *buffer, size_t count);
+	void WriteUInt(HANDLE hFile, UINT value);
+	void WriteString(HANDLE hFile, const TCHAR *value);
 
 };
 

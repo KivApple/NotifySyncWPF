@@ -12,6 +12,7 @@ namespace NotifySync {
 		public static NotifyIcon NotifyIcon;
 		public static ISystemNotifier SystemNotifier;
 		public static ProtocolServer ProtocolServer;
+		public static IPCServer ipcServer;
 		public static bool StartMinimized { get; private set; }
 
 		protected override void OnStartup(StartupEventArgs e) {
@@ -25,6 +26,7 @@ namespace NotifySync {
 			InitNotifyIcon();
 			SystemNotifier = new UwpToastNotifier(); // new BalloonSystemNotifier();
 			ProtocolServer = new ProtocolServer();
+			ipcServer = new IPCServer();
 		}
 
 		protected override void OnExit(ExitEventArgs e) {

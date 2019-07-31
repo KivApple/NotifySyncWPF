@@ -16,6 +16,7 @@ namespace NotifySync {
 	public class RemoteDevice: INotifyPropertyChanged {
 		public string Name { get; set; }
         public readonly byte[] Key;
+		public readonly string Id;
         private readonly NetworkCipher _cipher;
 		public Connection CurrentConnection { get; private set; }
         public bool IsConnected => CurrentConnection != null;
@@ -29,6 +30,7 @@ namespace NotifySync {
 		
 		public RemoteDevice(byte[] key) {
             Key = key;
+			Id = BitConverter.ToString(SHA1.Create().ComputeHash(Key)).Replace("-", "");
 			_cipher = new NetworkCipher(key);
 			// Initialize plugins
 			BatteryStatus = new BatteryStatus();
