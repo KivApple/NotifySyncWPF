@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Forms;
@@ -18,8 +19,15 @@ namespace NotifySync {
 		protected override void OnStartup(StartupEventArgs e) {
 			base.OnStartup(e);
 			foreach (var arg in e.Args) {
-				if (arg == "--minimized") {
-					StartMinimized = true;
+				switch (arg) {
+					case "--minimized":
+						StartMinimized = true;
+						break;
+					case "--installer":
+						NotifySync.MainWindow.EnableAutoStart(true);
+						Process.Start(Process.GetCurrentProcess().MainModule.FileName);
+						Environment.Exit(0);
+						return;
 				}
 			}
 			InitSettings();

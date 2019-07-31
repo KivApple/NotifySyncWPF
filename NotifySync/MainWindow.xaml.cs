@@ -60,12 +60,16 @@ namespace NotifySync {
 		}
 
 		private void AutoStartCheckBox_Checked(object sender, RoutedEventArgs e) {
+			EnableAutoStart(AutoStartCheckBox.IsChecked.Value);
+		}
+
+		public static void EnableAutoStart(bool enable) {
 			using (
 				var regKeyApp = Registry.CurrentUser.OpenSubKey(
 					"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", true
 				)
 			) {
-				if (AutoStartCheckBox.IsChecked == true) {
+				if (enable) {
 					regKeyApp.SetValue("NotifySync", Process.GetCurrentProcess().MainModule.FileName + " --minimized");
 				} else {
 					regKeyApp.DeleteValue("NotifySync");

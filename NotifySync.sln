@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NotifySync", "NotifySync\No
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "NotifySyncShellExt", "NotifySyncShellExt\NotifySyncShellExt.vcxproj", "{A87A8001-5AA0-48F9-801B-956A394C49D5}"
 EndProject
+Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "NotifySyncSetup", "NotifySyncSetup\NotifySyncSetup.vdproj", "{206E57F8-16C3-4456-92DA-17D89986D608}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -39,6 +41,12 @@ Global
 		{A87A8001-5AA0-48F9-801B-956A394C49D5}.Release|x64.Build.0 = Release|x64
 		{A87A8001-5AA0-48F9-801B-956A394C49D5}.Release|x86.ActiveCfg = Release|Win32
 		{A87A8001-5AA0-48F9-801B-956A394C49D5}.Release|x86.Build.0 = Release|Win32
+		{206E57F8-16C3-4456-92DA-17D89986D608}.Debug|Any CPU.ActiveCfg = Debug
+		{206E57F8-16C3-4456-92DA-17D89986D608}.Debug|x64.ActiveCfg = Debug
+		{206E57F8-16C3-4456-92DA-17D89986D608}.Debug|x86.ActiveCfg = Debug
+		{206E57F8-16C3-4456-92DA-17D89986D608}.Release|Any CPU.ActiveCfg = Release
+		{206E57F8-16C3-4456-92DA-17D89986D608}.Release|x64.ActiveCfg = Release
+		{206E57F8-16C3-4456-92DA-17D89986D608}.Release|x86.ActiveCfg = Release
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
