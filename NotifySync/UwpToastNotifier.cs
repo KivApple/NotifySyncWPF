@@ -93,11 +93,19 @@ namespace NotifySync {
 			};
 			toast.Dismissed += OnDismissed;
 			if (_toasts.TryGetValue(notification.Tag, out var oldToast)) {
-				_toastNotifier.Hide(oldToast);
+				try {
+					_toastNotifier.Hide(oldToast);
+				} catch (Exception e) {
+					App.ShowException(e, true);
+				}
 			}
 			_toasts[notification.Tag] = toast;
 			_notifications[notification.Tag] = notification;
-			_toastNotifier.Show(toast);
+			try {
+				_toastNotifier.Show(toast);
+			} catch (Exception e) {
+				App.ShowException(e);
+			}
 		}
 
 		public void DismissNotification(string tag) {
@@ -107,7 +115,11 @@ namespace NotifySync {
 				_notifications.Remove(tag);
 			}
 			_toasts.Remove(tag);
-			_toastNotifier.Hide(toast);
+			try {
+				_toastNotifier.Hide(toast);
+			} catch (Exception e) {
+				App.ShowException(e, true);
+			}
 		}
 
 		private void HandleNotificationActivated(string invokedArgs, NotificationUserInput userInput) {

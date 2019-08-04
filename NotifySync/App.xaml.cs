@@ -141,8 +141,10 @@ namespace NotifySync {
 			await Current.Dispatcher.InvokeAsync(action);
 		}
 
-		public static void ShowException(Exception e) {
-			MessageBox.Show(e.GetType() + ": " + e.Message + "\n" + e.StackTrace);
+		public static void ShowException(Exception e, bool silent = false) {
+			if (!silent) {
+				MessageBox.Show(e.GetType() + ": " + e.Message + "\n" + e.StackTrace);
+			}
 		}
 
 		#region ISingleInstanceApp Members
