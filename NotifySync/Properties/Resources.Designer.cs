@@ -19,7 +19,7 @@ namespace NotifySync.Properties {
     // class via a tool like ResGen or Visual Studio.
     // To add or remove a member, edit your .ResX file then rerun ResGen
     // with the /str option, or rebuild your VS project.
-    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "4.0.0.0")]
+    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "16.0.0.0")]
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
     public class Resources {
@@ -282,6 +282,15 @@ namespace NotifySync.Properties {
         public static string SendingFileTo {
             get {
                 return ResourceManager.GetString("SendingFileTo", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Share clipboard.
+        /// </summary>
+        public static string ShareClipboard {
+            get {
+                return ResourceManager.GetString("ShareClipboard", resourceCulture);
             }
         }
         

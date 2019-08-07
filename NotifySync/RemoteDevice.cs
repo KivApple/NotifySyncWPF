@@ -29,6 +29,7 @@ namespace NotifySync {
 		public FileReceiver FileReceiver { get; }
 		public DeviceFinder DeviceFinder { get; }
 		public PhoneCallListener PhoneCallListener { get; }
+		public ClipboardListener ClipboardListener { get; }
 		
 		public RemoteDevice(byte[] key) {
             Key = key;
@@ -41,6 +42,7 @@ namespace NotifySync {
 			FileReceiver = new FileReceiver(this);
 			DeviceFinder = new DeviceFinder(this);
 			PhoneCallListener = new PhoneCallListener(this);
+			ClipboardListener = new ClipboardListener(this);
 		}
 
 		public bool AcceptBroadcast(byte[] packetData) {
@@ -145,6 +147,9 @@ namespace NotifySync {
 					RemoteDevice.CurrentIpAddress = ipAddress;
 					RemoteDevice.NotifyPropertyChanged("CurrentIpAddress");
 					RemoteDevice.NotifyPropertyChanged("IsConnected");
+
+					RemoteDevice.ClipboardListener.HandleConnect();
+
 					while (_tcpClient.Connected) {
 						dynamic json;
 						try {
@@ -203,6 +208,9 @@ namespace NotifySync {
 						break;
 					case "phone-call-ended":
 						await RemoteDevice.PhoneCallListener.HandleCallEnded();
+						break;
+					case "clipboard":
+						await RemoteDevice.ClipboardListener.HandleJson(json);
 						break;
 				}
 			}

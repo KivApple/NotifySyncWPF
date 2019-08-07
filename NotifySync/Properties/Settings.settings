@@ -11,10 +11,13 @@
     <Setting Name="DeviceName" Type="System.String" Scope="User">
       <Value Profile="(Default)" />
     </Setting>
-    <!-- <Setting Name="DismissNotificationsByClick" Type="System.Boolean" Scope="User">
-      <Value Profile="(Default)">True</Value>
-    </Setting> -->
     <Setting Name="EnableEncryption" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
+    <Setting Name="DismissNotificationsByClick" Type="System.String" Scope="User">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
+    <Setting Name="ShareClipboard" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">True</Value>
     </Setting>
   </Settings>

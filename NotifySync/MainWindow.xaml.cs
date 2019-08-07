@@ -3,9 +3,11 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Interop;
 using System.Windows.Media.Imaging;
 using Microsoft.Win32;
 using QRCoder;
@@ -15,7 +17,9 @@ namespace NotifySync {
 		public static MainWindow Instance { get; private set; }
 		public event PropertyChangedEventHandler PropertyChanged;
 		public bool CanClose = false;
+		private bool _created = false;
 		private bool _shown = false;
+		private IntPtr hWndNextClipboardViewer;
 		
 		public MainWindow() {
 			InitializeComponent(); 
@@ -23,8 +27,10 @@ namespace NotifySync {
 			DevicesListBox.ItemsSource = App.ProtocolServer.PairedDevices;
 			(App.ProtocolServer.PairedDevices as INotifyCollectionChanged).CollectionChanged += 
 				PairedDevices_OnCollectionChanged;
+
 			Deactivated += Window_Deactivated;
 			Closing += Window_Closing;
+
 			if (App.StartMinimized) {
 				Hide();
 			}
@@ -45,6 +51,14 @@ namespace NotifySync {
 
 		protected override void OnContentRendered(EventArgs e) {
 			base.OnContentRendered(e);
+			if (!_created) {
+				_created = true;
+
+				var wih = new WindowInteropHelper(this);
+				var hWndSource = HwndSource.FromHwnd(wih.Handle);
+				hWndSource.AddHook(WinProc);
+				hWndNextClipboardViewer = Win32.SetClipboardViewer(hWndSource.Handle);
+			}
 			if (_shown) return;
 			_shown = true;
 			App.ProtocolServer.SendBroadcasts();
@@ -155,7 +169,33 @@ namespace NotifySync {
 				PairNewDevicePanel.Visibility = Visibility.Collapsed;
 			}
 		}
-		
+
+		private IntPtr WinProc(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled) {
+			switch (msg) {
+				case Win32.WM_CHANGECBCHAIN:
+					if (wParam == hWndNextClipboardViewer) {
+						hWndNextClipboardViewer = wParam;
+					} else if (hWndNextClipboardViewer != IntPtr.Zero) {
+						Win32.SendMessage(hWndNextClipboardViewer, msg, wParam, lParam);
+					}
+					break;
+				case Win32.WM_DRAWCLIPBOARD: {
+					if (hWndNextClipboardViewer != IntPtr.Zero) {
+						Win32.SendMessage(hWndNextClipboardViewer, msg, wParam, lParam);
+					}
+					string text = null;
+					if (Clipboard.ContainsText()) {
+						text = Clipboard.GetText();
+					}
+					foreach (var device in App.ProtocolServer.PairedDevices.Where(device => device.IsConnected).ToList()) {
+						device.ClipboardListener.SetText(text);
+					}
+					break;
+				}
+			}
+			return IntPtr.Zero;
+		}
+
 		private void NotifyPropertyChanged([CallerMemberName] string propertyName = "") {
 			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 		}

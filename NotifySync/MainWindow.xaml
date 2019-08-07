@@ -44,6 +44,10 @@
 							Content="{x:Static res:Resources.EnableEncryption}"
 							IsChecked="{Binding Source={StaticResource Settings}, 
 							Path=Default.EnableEncryption}" />
+					<CheckBox Name="ShareClipboardCheckBox"
+							Content="{x:Static res:Resources.ShareClipboard}"
+							IsChecked="{Binding Source={StaticResource Settings}, 
+							Path=Default.ShareClipboard}" />
 				</StackPanel>
 				
 				<TextBlock>
