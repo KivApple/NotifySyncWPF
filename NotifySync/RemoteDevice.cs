@@ -27,6 +27,7 @@ namespace NotifySync {
 		public NotificationList NotificationList { get; }
 		public FileSender FileSender { get; }
 		public FileReceiver FileReceiver { get; }
+		public DeviceFinder DeviceFinder { get; }
 		
 		public RemoteDevice(byte[] key) {
             Key = key;
@@ -37,6 +38,7 @@ namespace NotifySync {
 			NotificationList = new NotificationList();
 			FileSender = new FileSender(this);
 			FileReceiver = new FileReceiver(this);
+			DeviceFinder = new DeviceFinder(this);
 		}
 
 		public bool AcceptBroadcast(byte[] packetData) {
@@ -190,6 +192,9 @@ namespace NotifySync {
 						break;
 					case "file":
 						await RemoteDevice.FileReceiver.HandleJson(json);
+						break;
+					case "device-found":
+						RemoteDevice.DeviceFinder.DeviceFound();
 						break;
 				}
 			}

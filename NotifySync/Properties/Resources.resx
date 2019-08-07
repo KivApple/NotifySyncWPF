@@ -199,4 +199,7 @@
   <data name="ShowInFolder" xml:space="preserve">
     <value>Show in folder</value>
   </data>
+  <data name="FindDevice" xml:space="preserve">
+    <value>Find device</value>
+  </data>
 </root>

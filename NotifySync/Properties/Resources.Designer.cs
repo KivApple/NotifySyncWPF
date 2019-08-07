@@ -151,6 +151,15 @@ namespace NotifySync.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Find device.
+        /// </summary>
+        public static string FindDevice {
+            get {
+                return ResourceManager.GetString("FindDevice", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to General settings.
         /// </summary>
         public static string GeneralSettingsButton {

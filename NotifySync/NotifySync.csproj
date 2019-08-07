@@ -96,6 +96,7 @@
     <Compile Include="BatteryLevelConverter.cs" />
     <Compile Include="BatteryStatus.cs" />
     <Compile Include="BatteryStatusIconConverter.cs" />
+    <Compile Include="DeviceFinder.cs" />
     <Compile Include="FileReceiver.cs" />
     <Compile Include="FileSender.cs" />
     <Compile Include="IPCServer.cs" />

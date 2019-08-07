@@ -6,6 +6,7 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Media.Imaging;
 using Microsoft.Win32;
 using QRCoder;
@@ -135,10 +136,6 @@ namespace NotifySync {
 				NewDeviceQrCodeImage.Source = bitmapImage;
 			}
 		}
-		
-		private void NotifyPropertyChanged([CallerMemberName] string propertyName = "") {
-			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-		}
 
 		private void SendFileButton_OnClick(object sender, RoutedEventArgs e) {
 			var dialog = new OpenFileDialog {
@@ -158,6 +155,10 @@ namespace NotifySync {
 			if (e.NewItems != null && e.NewItems.Count > 0) {
 				PairNewDevicePanel.Visibility = Visibility.Collapsed;
 			}
+		}
+		
+		private void NotifyPropertyChanged([CallerMemberName] string propertyName = "") {
+			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 		}
 	}
 }

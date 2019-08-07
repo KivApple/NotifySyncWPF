@@ -112,6 +112,12 @@
 											Padding="4"
 											IsEnabled="{Binding Path=IsConnected}"
 											Click="SendFileButton_OnClick" />
+										<ToggleButton 
+											Name="FindDeviceButton"
+											Content="{x:Static res:Resources.FindDevice}"
+											Padding="4"
+											IsEnabled="{Binding Path=IsConnected}"
+											IsChecked="{Binding Path=DeviceFinder.Finding}" />
 										<Button
 											Name="UnpairDeviceButton"
 											Click="UnpairDeviceButton_OnClick"
