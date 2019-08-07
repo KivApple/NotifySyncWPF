@@ -184,8 +184,12 @@ namespace NotifySync {
 						Win32.SendMessage(hWndNextClipboardViewer, msg, wParam, lParam);
 					}
 					string text = null;
-					if (Clipboard.ContainsText()) {
-						text = Clipboard.GetText();
+					try {
+						if (Clipboard.ContainsText()) {
+							text = Clipboard.GetText();		
+						}
+					} catch (Exception e) {
+						App.ShowException(e, true);
 					}
 					foreach (var device in App.ProtocolServer.PairedDevices.Where(device => device.IsConnected).ToList()) {
 						device.ClipboardListener.SetText(text);
