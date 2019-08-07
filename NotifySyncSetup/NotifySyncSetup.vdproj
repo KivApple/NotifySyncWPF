@@ -3281,7 +3281,7 @@
         "Name" = "8:Microsoft Visual Studio"
         "ProductName" = "8:NotifySync"
         "ProductCode" = "8:{DAAA2CD8-9878-4CF9-907D-63C07094AADE}"
-        "PackageCode" = "8:{E21F01CF-1781-4F32-89BE-64FCE137AE13}"
+        "PackageCode" = "8:{CA8D45FF-59D5-416B-8D14-81C03C06E215}"
         "UpgradeCode" = "8:{9AF32420-BD99-45CB-A6B6-D392D1894685}"
         "AspNetVersion" = "8:"
         "RestartWWWService" = "11:FALSE"

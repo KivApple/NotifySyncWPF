@@ -25,7 +25,7 @@ namespace NotifySync {
 						break;
 					case "--installer":
 						NotifySync.MainWindow.EnableAutoStart(true);
-						Process.Start(Process.GetCurrentProcess().MainModule.FileName);
+						Process.Start("explorer.exe", Process.GetCurrentProcess().MainModule.FileName);
 						Environment.Exit(0);
 						return;
 				}
