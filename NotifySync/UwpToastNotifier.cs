@@ -65,6 +65,17 @@ namespace NotifySync {
 			if (notification.Tag == null) {
 				notification.Tag = "#" + _toastIdGenerator.GetId(notification, out _);
 			}
+			if (notification.Ongoing) {
+				toastXml.DocumentElement.SetAttribute("scenario", "reminder");
+				if (notification.Actions.Length == 0) {
+					notification.Actions = new[] {
+						new SystemNotification.Action {
+							Index = -1, 
+							Title = Resources.Dismiss
+						}
+					};
+				}
+			}
 			if (notification.Actions.Length > 0) {
 				var actionsElement = toastXml.CreateElement("actions");
 				foreach (var action in notification.Actions) {

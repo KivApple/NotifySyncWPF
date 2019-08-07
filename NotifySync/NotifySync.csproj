@@ -102,6 +102,7 @@
     <Compile Include="IPCServer.cs" />
     <Compile Include="ISystemNotifier.cs" />
     <Compile Include="NotificationList.cs" />
+    <Compile Include="PhoneCallListener.cs" />
     <Compile Include="ProtocolServer.cs" />
     <Compile Include="RemoteDevice.cs" />
     <Compile Include="TextInputDialog.xaml.cs">

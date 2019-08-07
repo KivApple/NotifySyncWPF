@@ -5,7 +5,7 @@ using Newtonsoft.Json.Linq;
 
 namespace NotifySync {
 	public class DeviceFinder: INotifyPropertyChanged {
-		private RemoteDevice _device;
+		private readonly RemoteDevice _device;
 		public event PropertyChangedEventHandler PropertyChanged;
 
 		private bool _finding;

@@ -28,6 +28,7 @@ namespace NotifySync {
 		public FileSender FileSender { get; }
 		public FileReceiver FileReceiver { get; }
 		public DeviceFinder DeviceFinder { get; }
+		public PhoneCallListener PhoneCallListener { get; }
 		
 		public RemoteDevice(byte[] key) {
             Key = key;
@@ -39,6 +40,7 @@ namespace NotifySync {
 			FileSender = new FileSender(this);
 			FileReceiver = new FileReceiver(this);
 			DeviceFinder = new DeviceFinder(this);
+			PhoneCallListener = new PhoneCallListener(this);
 		}
 
 		public bool AcceptBroadcast(byte[] packetData) {
@@ -195,6 +197,12 @@ namespace NotifySync {
 						break;
 					case "device-found":
 						RemoteDevice.DeviceFinder.DeviceFound();
+						break;
+					case "phone-call":
+						await RemoteDevice.PhoneCallListener.HandleCall(json);
+						break;
+					case "phone-call-ended":
+						await RemoteDevice.PhoneCallListener.HandleCallEnded();
 						break;
 				}
 			}

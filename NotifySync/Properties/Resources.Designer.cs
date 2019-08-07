@@ -106,6 +106,15 @@ namespace NotifySync.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Dismiss.
+        /// </summary>
+        public static string Dismiss {
+            get {
+                return ResourceManager.GetString("Dismiss", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Dismiss notifications on remote device by click.
         /// </summary>
         public static string DismissNotificationsByClick {
@@ -165,6 +174,15 @@ namespace NotifySync.Properties {
         public static string GeneralSettingsButton {
             get {
                 return ResourceManager.GetString("GeneralSettingsButton", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Incoming call.
+        /// </summary>
+        public static string IncomingCall {
+            get {
+                return ResourceManager.GetString("IncomingCall", resourceCulture);
             }
         }
         

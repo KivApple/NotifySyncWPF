@@ -13,6 +13,7 @@ namespace NotifySync {
 		public string AppName;
 		public byte[] IconData;
 		public DateTime? Timestamp;
+		public bool Ongoing;
 		public Action[] Actions = new Action[0];
 		public event Action<SystemNotification> Dismissed;
 		public event Action<SystemNotification> Activated;
